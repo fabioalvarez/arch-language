@@ -265,12 +265,14 @@ def ncs_model(e2):
 // Analyses (Delivery 2, sections 6.1 and 8: structure before the decisions)
 analysis DQS1 scenario "D-QS1" availability target 99.9 :
   NCG, TRA, ADU, RSK, CAR, RMDB, EXDB
+// Backlog of a 4 h outage of Road (Delivery 2): 14400 custody events (1 ev/s), consumed
+// only by CAR, and 288000 position reports (20 ev/s), consumed only by TRS.
 analysis DQS10 scenario "D-QS10" recovery backlog 302400 target 230 :
-  CAR, TRS
+  CAR = 14400, TRS = 288000
 // SoS-QS1 on the starting structure: the NCS stage is the result of DQS10 in this model
-// (7033 s); SoS-K32 to SoS-K36 do not exist yet, so M3 cannot be written.
+// (7200 s); SoS-K32 to SoS-K36 do not exist yet, so M3 cannot be written.
 analysis SoSQS1M4 scenario "SoS-QS1 (M4)" deadline target 900 :
-  RGW = 200, SoS_K5 = 40, NCG = 7033,
+  RGW = 200, SoS_K5 = 40, NCG = 7200,
   [CGW = 300 | PGW = 300 | LGW = 300 | FGW = 300]
 ''')
     else:
@@ -281,8 +283,10 @@ analysis DQS1 scenario "D-QS1" availability target 99.9 :
 // Same chain with the load balancers it traverses, at the availability of L17 (99.9 %)
 analysis DQS1Balancers scenario "D-QS1 (with balancers)" availability target 99.9 :
   BEN, NCG beta 0.10, BTR, TRA beta 0.10, BAD, ADU beta 0.10, BRI, RSK beta 0.10, [EXDB | EXDB2] beta 0.10
+// Backlog after compaction (Delivery 2): 14400 custody events, consumed only by CAR,
+// and 6000 compacted position reports, consumed only by TRS.
 analysis DQS10 scenario "D-QS10" recovery backlog 20400 target 230 :
-  CAR, TRS
+  CAR = 14400, TRS = 6000
 ''' + SOS_ANALYSES)
     return ''.join(out)
 open('models/ncs-e1.arch','w').write(ncs_model(False))

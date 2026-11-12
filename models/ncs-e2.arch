@@ -366,8 +366,10 @@ analysis DQS1 scenario "D-QS1" availability target 99.9 :
 // Same chain with the load balancers it traverses, at the availability of L17 (99.9 %)
 analysis DQS1Balancers scenario "D-QS1 (with balancers)" availability target 99.9 :
   BEN, NCG beta 0.10, BTR, TRA beta 0.10, BAD, ADU beta 0.10, BRI, RSK beta 0.10, [EXDB | EXDB2] beta 0.10
+// Backlog after compaction (Delivery 2): 14400 custody events, consumed only by CAR,
+// and 6000 compacted position reports, consumed only by TRS.
 analysis DQS10 scenario "D-QS10" recovery backlog 20400 target 230 :
-  CAR, TRS
+  CAR = 14400, TRS = 6000
 
 // Analyses of SoS-QS1 (section 3.6.6 of Delivery 2): composition of the agreed budgets
 analysis SoSQS1M4 scenario "SoS-QS1 (M4)" deadline target 900 :

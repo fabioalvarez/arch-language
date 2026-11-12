@@ -1,6 +1,8 @@
+invalid/c3-boundary-tier.arch: REJECTED: SoS_K5: boundary link reaches CAR (tier T3); only T2 boundary components may face another constituent
 invalid/c4-domain.arch: REJECTED: RMDB: data store of domain Carga accessed from ['RSK']
 invalid/c4-lab4-rule.arch: REJECTED: EXDB: data store shared by ['ADU', 'RSK']
 invalid/c5-deadline.arch: REJECTED: SoSQS1M4: RGW has no budget (= value) for the deadline
+invalid/c5-recovery-shares.arch: REJECTED: DQS10: consumers are not interchangeable; ['CAR', 'TRS'] need their share of the backlog (= events)
 invalid/c5-recovery.arch: REJECTED: DQS10: TRS needs event_capacity and event_load
 invalid/c6-layers.arch: REJECTED: D_K13: HCDB (T4) joined directly to CCC (T1)
 invalid/c7-command.arch: REJECTED: SoS_K9b: control command crosses the boundary of a constituent

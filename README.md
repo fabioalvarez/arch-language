@@ -40,15 +40,16 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 | Presupuesto por factor (`= valor`) | Gramática | Un presupuesto es un término del escenario, no una propiedad del elemento: el NCS tiene 230 s en M4 y 15 s en M3 |
 | `beta` en un factor simple | Gramática, análisis | Componente con `instances` ≥ 2 y fracción de causa común, sin duplicar el componente |
 | Métrica `deadline` | Análisis | Suma de presupuestos; un grupo trabaja en paralelo y cuenta su máximo (M4) |
-| Métrica `recovery` con `backlog` | Análisis | Tiempo = rezago / Σ(capacidad × instancias − carga) |
+| Métrica `recovery` con `backlog` | Análisis, C5 | Cada consumidor absorbe solo su parte del rezago (`CAR = 14400`) con su propia capacidad libre; manda el más lento: tiempo = máx(parteᵢ / (capacidadᵢ × instanciasᵢ − cargaᵢ)). Corregido tras la Entrega 3: antes se sumaban capacidades de consumidores distintos |
 
 ## Restricciones
 
 | ID | Restricción | Origen | Modelo rechazado |
 |----|-------------|--------|------------------|
-| C1–C3 | Sin cambios (Laboratorio 4) | — | — |
+| C1–C2 | Sin cambios (Laboratorio 4) | — | — |
+| C3 (corregida) | Todo conector de frontera tiene acuerdo, y cada tramo que cruza la frontera une dos componentes T2: un conector con acuerdo conectado directo a un T3 o T4 se rechaza. Mismo mensaje que C8 [A] | Corrección de la Entrega 3 | `c3-boundary-tier.arch` |
 | C4 (adaptada) | Un almacén T4 solo se accede por dependencia desde componentes de su dominio; sin dominio, rige la regla del Laboratorio 4 | Regla de datos por dominio del NCS | `c4-domain.arch`, `c4-lab4-rule.arch` |
-| C5 (extendida) | Cada factor tiene la propiedad que su métrica necesita, incluidas `deadline` y `recovery` | U5, Lectura 2, §4.2 | `c5-deadline.arch`, `c5-recovery.arch` |
+| C5 (extendida) | Cada factor tiene la propiedad que su métrica necesita, incluidas `deadline` y `recovery`; en `recovery` con varios consumidores, cada uno lleva su parte del rezago y las partes suman el rezago | U5, Lectura 2, §4.2; corrección de la Entrega 3 | `c5-deadline.arch`, `c5-recovery.arch`, `c5-recovery-shares.arch` |
 | C6 (nueva, estilo) | Ningún componente T1 se une directamente a un almacén T4 | Estilo **en capas** del NCS (Entrega 1, §5) | `c6-layers.arch` |
 | C7 (nueva, estilo) | Ningún comando de control cruza la frontera de un constituyente | SoS **reconocido**: estilo jerárquico solo donde la autoridad es real (Entrega 1, nivel global) | `c7-command.arch` |
 
@@ -59,7 +60,8 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 - Un par solicitud/respuesta se clasifica como bloqueante en sus dos conectores. D-K1, que en la Entrega 2 es bloqueante para solicitudes y sumidero para eventos, se clasifica como bloqueante (la más restrictiva).
 - Disponibilidad de 99,9 % (L17) en cada elemento que entra en una cadena. `event_capacity` = 3 veces la carga normal (L19), repartida entre los consumidores del Bus: Carga 1,5 → 4,5 eventos/s y Tránsito 20 → 60 eventos/s.
 - `sos.arch` usa solo el lenguaje base. Los presupuestos de M4 van en ms y cada tramo lo lleva un elemento distinto, como K18 lleva la etapa 4 en el Laboratorio 4: RGW 200 s, SoS-K5 40 s, NCG 230 s, SoS-K32 10 s y CGW 300 s. CGW representa a los cuatro consumidores, que tienen el mismo presupuesto y trabajan en paralelo. M3 no cabe en el lenguaje base (RGW y NCG necesitarían un segundo valor): se analiza en los modelos del NCS con la métrica `deadline`. Los modelos del NCS repiten esas latencias en los elementos de frontera, que se escriben como en `sos.arch`.
-- En `ncs-e1.arch`, el tramo del NCS en M4 toma el resultado de `DQS10` en ese mismo modelo (7.033 s). M3 no se puede escribir porque SoS-K36 todavía no existe.
+- Partes del rezago de D-QS10 (Entrega 2, caída de Carretera de 4 h): 14.400 custodias (1 ev/s), que consume solo CAR, más 288.000 posiciones (20 ev/s) en e1 o 6.000 posiciones compactadas en e2, que consume solo TRS.
+- En `ncs-e1.arch`, el tramo del NCS en M4 toma el resultado de `DQS10` en ese mismo modelo (7.200 s). M3 no se puede escribir porque SoS-K36 todavía no existe.
 
 ## Resultados
 
@@ -67,9 +69,9 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 |-----------|-----------|--------------|-----------|------------|
 | D-QS1 | 99,30 %, no cumple | 99,95 %, cumple | 99,30 % → 99,95 % | Ninguna |
 | D-QS1 con balanceadores | — | 99,55 %, no cumple | No calculado | La Entrega 2 no contó los 4 balanceadores que la cadena atraviesa, cada uno sin copia |
-| D-QS10 | 7.032,6 s, no cumple | 189,8 s, cumple | ≈ 7.030 s → ≈ 190 s | Redondeo |
+| D-QS10 (corregido) | 7.200 s (TRS), no cumple | 1.920 s (CAR), no cumple | ≈ 7.030 s → ≈ 190 s | La Entrega 2 y la Entrega 3 sumaban la capacidad libre de CAR y TRS (189,8 s); cada uno solo consume su clase de evento |
 | SoS-QS1 (M4), `sos.arch` | — | 780.000 ms, cumple | 780 s | Ninguna; lenguaje base |
-| SoS-QS1 (M4), modelos del NCS | 7.573 s, no cumple | 780 s, cumple | Sin cifra → 780 s | La Entrega 2 no dio cifra para la estructura de partida |
+| SoS-QS1 (M4), modelos del NCS | 7.740 s, no cumple | 780 s con el presupuesto acordado (NCG = 230 s); con la medida corregida de D-QS10 (1.920 s) serían 2.470 s, no cumple | Sin cifra → 780 s | Pendiente para la P4: la medida del NCS supera su presupuesto |
 | SoS-QS1 (M3), modelos del NCS | No aplica (SoS-K36 no existe) | 55 s, cumple | 55 s | Ninguna; no se puede escribir en `sos.arch` con el lenguaje base |
 
 ## Equipo A — Sistema de Gestión de Puertos del Caribe (CPMS)

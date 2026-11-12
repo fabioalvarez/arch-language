@@ -49,9 +49,20 @@ def check_model(model):
             sources = {link.path[0].name for link in k.links}
             if len(sources) > 1:
                 _error(f'{k.name}: control command with several sources {sorted(sources)}', k)
-        # C3. Every boundary connector is governed by an agreement among owners.
-        if _boundary(k) and not k.agreement:
-            _error(f'{k.name}: boundary connector without agreement', k)
+        # C3 [D, corrected after Delivery 3]. Every boundary connector is governed by an
+        # agreement among owners, and the agreement binds only boundary components: every
+        # hop of the connector that crosses a constituent joins two T2 components. A
+        # connector with an agreement attached directly to a T3 or T4 is rejected.
+        if _boundary(k):
+            if not k.agreement:
+                _error(f'{k.name}: boundary connector without agreement', k)
+            for link in k.links:
+                for a, b in zip(link.path, link.path[1:]):
+                    if a.system is not b.system and (a.tier != 'T2' or b.tier != 'T2'):
+                        bad = a if a.tier != 'T2' else b
+                        # Same message as C8 [A], so the rejections of team A do not change.
+                        _error(f'{k.name}: boundary link reaches {bad.name} (tier {bad.tier}); '
+                               f'only T2 boundary components may face another constituent', k)
         # C6 [D]. Layers (NCS, Delivery 1 section 5): no component of T1 is
         # joined directly to a data store of T4; every read goes through a T3 service.
         for link in k.links:
@@ -63,7 +74,9 @@ def check_model(model):
         if 'control_command' in k.natures and _boundary(k):
             _error(f'{k.name}: control command crosses the boundary of a constituent', k)
         # C8 [A, C]. Gateway pattern (Delivery 1): every link that crosses a boundary
-        # starts and ends at a boundary component of tier T2.
+        # starts and ends at a boundary component of tier T2. Since the correction of C3
+        # [D] the same check runs inside C3, with the same message; C8 is kept as the
+        # name team A gives to the gateway pattern.
         for link in k.links:
             for a, b in zip(link.path, link.path[1:]):
                 if a.system is not b.system and (a.tier != 'T2' or b.tier != 'T2'):
@@ -148,6 +161,21 @@ def check_model(model):
 
         if a.metric == 'recovery' and not a.backlog:
             _error(f'{a.name}: a recovery analysis needs its backlog', a)
+
+        # C5 [D, corrected after Delivery 3]. The spare capacity of two consumers is not
+        # interchangeable: each consumer absorbs only the events of its own class. With more
+        # than one consumer, every consumer carries its share of the backlog (= events),
+        # and the shares add up to the backlog.
+        if a.metric == 'recovery':
+            consumers = [s for f in a.factors for s in _singles(f)]
+            shares = [s.value for s in consumers]
+            if len(consumers) > 1 and any(v is None for v in shares):
+                missing = [s.ref.name for s in consumers if s.value is None]
+                _error(f'{a.name}: consumers are not interchangeable; {missing} '
+                       f'need their share of the backlog (= events)', a)
+            if all(v is not None for v in shares) and round(sum(shares), 6) != round(a.backlog, 6):
+                _error(f'{a.name}: the shares of the backlog add up to {sum(shares):g}, '
+                       f'not to {a.backlog:g}', a)
 
         if a.metric == 'drain':  # [C]
             steps = [s for f in a.factors for s in _singles(f)]

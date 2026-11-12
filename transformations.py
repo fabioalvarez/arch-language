@@ -220,20 +220,28 @@ def analyze(analysis):
         summary = f'Bottleneck utilization: **{result:.0f} %**'
         met = round(result, 6) <= analysis.target
     else:
-        # [D] recovery: time to absorb a backlog with the spare capacity of the consumers.
-        spare = 0
+        # [D, corrected after Delivery 3] recovery: each consumer absorbs only its share of
+        # the backlog with its own spare capacity; consumers work in parallel, so the
+        # slowest one sets the recovery time. A single consumer takes the whole backlog.
+        result, worst = 0.0, None
         for f in analysis.factors:
             c = f.ref
             n = _instances(c)
             s = c.event_capacity * n - c.event_load
-            spare += s
-            rows.append(f'| {c.name} | {c.event_capacity:g} × {n} | {c.event_load:g} | {s:g} |')
-        header = ['| Consumer | Capacity (events/s × instances) | Load (events/s) | Spare (events/s) |',
-                  '|----------|----------------------------------|-----------------|------------------|']
-        result = analysis.backlog / spare if spare > 0 else float('inf')
-        rows.append(f'| **Total** | | | **{spare:g}** |')
-        summary = (f'Recovery time: **{result:.1f} s** '
-                   f'({analysis.backlog:g} events / {spare:g} events/s)')
+            share = f.value if f.value is not None else analysis.backlog
+            t = share / s if s > 0 else float('inf')
+            if t >= result:
+                result, worst = t, c.name
+            tt = '∞' if math.isinf(t) else f'{t:.1f} s'
+            rows.append(f'| {c.name} | {share:g} | {c.event_capacity:g} × {n} | {c.event_load:g} | '
+                        f'{s:g} | {tt} |')
+        header = ['| Consumer | Share of the backlog (events) | Capacity (events/s × instances) | '
+                  'Load (events/s) | Spare (events/s) | Time |',
+                  '|----------|-------------------------------|----------------------------------|'
+                  '-----------------|------------------|------|']
+        tt = '∞' if math.isinf(result) else f'{result:.1f} s'
+        summary = (f'Recovery time: **{tt}** (slowest consumer: {worst}; '
+                   f'backlog {analysis.backlog:g} events)')
         met = result <= analysis.target
     verdict = 'met' if met else 'NOT met'
     return [f'## {analysis.name} (Scenario {analysis.scenario})', ''] + header + rows + \
