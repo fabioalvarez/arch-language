@@ -1,0 +1,193 @@
+flowchart LR
+  subgraph CPS["Sistema de Gestión de Puertos del Caribe"]
+    CGW["Caribbean Port Gateway (T2)"]
+  end
+  subgraph PPS["Sistema de Gestión de Puertos del Pacífico"]
+    PGW["Pacific Port Gateway (T2)"]
+  end
+  subgraph RTS["Sistema de Transporte Carretero"]
+    RGW["Road Gateway (T2)"]
+  end
+  subgraph RLS["Sistema de Transporte Férreo"]
+    LGW["Rail Gateway (T2)"]
+  end
+  subgraph FTS["Sistema de Transporte Fluvial"]
+    FGW["Fluvial Gateway (T2)"]
+  end
+  subgraph NCS["Sistema de Coordinación Nacional"]
+    CCC["Consola del Centro de Coordinación (T1)"]
+    CAD["Consola Aduanera (T1)"]
+    APP["Aplicación del Inspector (T1)"]
+    NCG["National Coordination Gateway (T2)"]
+    TRA["Traductor de Mensajes Externos (T2)"]
+    BUS["Bus de Eventos (T2)"]
+    ADP["Adaptador de Escáneres (T2)"]
+    BEN["Balanceador de Entrada (T2)"]
+    BTR["Balanceador del Traductor (T2)"]
+    BAD["Balanceador de Aduana (T2)"]
+    BRI["Balanceador de Riesgo (T2)"]
+    BCA["Balanceador de Carga (T2)"]
+    BTS["Balanceador de Tránsito (T2)"]
+    BUF["Búfer de Eventos (T2)"]
+    CAR["Servicio de Carga (T3)"]
+    TRS["Servicio de Tránsito (T3)"]
+    ADU["Servicio de Aduana (T3)"]
+    RSK["Servicio de Riesgo (T3)"]
+    IDN["Servicio de Identidad (T3)"]
+    CES["Controlador de Escalamiento (T3)"]
+    HCDB[("Historial de Carga DB (T4)")]
+    RMDB[("Repositorio de Manifiestos DB (T4)")]
+    HPDB[("Historial de Posiciones DB (T4)")]
+    EXDB[("Expediente Aduanero DB (T4)")]
+    CMDB[("Copia de Manifiestos DB (T4)")]
+    RADB[("Registro de Auditoría DB (T4)")]
+    EXDB2[("Expediente Aduanero DB (respaldo) (T4)")]
+    HCDBR[("Historial de Carga DB (réplica de lectura) (T4)")]
+    HPDBR[("Historial de Posiciones DB (réplica de lectura) (T4)")]
+    SCN["Escáner de Inspección No Intrusiva (T5)"]
+  end
+  NCG -->|D_K1| BTR
+  BTR -->|D_K1| TRA
+  TRA -->|D_K2| NCG
+  TRA -->|D_K3| BUF
+  TRA -->|D_K4a| BAD
+  BAD -->|D_K4a| ADU
+  ADU -->|D_K4b| TRA
+  TRA -->|D_K5a| BCA
+  BCA -->|D_K5a| CAR
+  CAR -->|D_K5b| TRA
+  BUS -->|D_K6| BCA
+  BCA -->|D_K6| CAR
+  CAR -->|D_K7| HCDB
+  CAR -->|D_K8| RMDB
+  BUS -->|D_K9| BTS
+  BTS -->|D_K9| TRS
+  TRS -->|D_K10| HPDB
+  TRS -->|D_K11| BUS
+  CAR -->|D_K12a| BTS
+  BTS -->|D_K12a| TRS
+  TRS -->|D_K12b| CAR
+  NCG -->|D_K13| CCC
+  CCC -->|D_K14a| BEN
+  BEN -->|D_K14a| NCG
+  NCG -->|D_K14b| CCC
+  ADU -->|D_K15a| BRI
+  BRI -->|D_K15a| RSK
+  RSK -->|D_K15b| ADU
+  RSK -->|D_K16a| BCA
+  BCA -->|D_K16a| CAR
+  CAR -->|D_K16b| RSK
+  RSK -->|D_K17| EXDB
+  CAD -->|D_K18a| BEN
+  BEN -->|D_K18a| NCG
+  NCG -->|D_K18b| CAD
+  CAD -->|D_K19| BEN
+  BEN -->|D_K19| NCG
+  ADU -->|D_K20| EXDB
+  ADU -->|D_K21| ADP
+  NCG -->|D_K22| SCN
+  SCN -->|D_K23| BEN
+  BEN -->|D_K23| NCG
+  ADP -->|D_K24| BAD
+  BAD -->|D_K24| ADU
+  APP -->|D_K25a| BEN
+  BEN -->|D_K25a| NCG
+  NCG -->|D_K25b| APP
+  APP -->|D_K26| BEN
+  BEN -->|D_K26| NCG
+  ADU -->|D_K27| BUF
+  BUS -->|D_K28| BRI
+  BRI -->|D_K28| RSK
+  RSK -->|D_K29| CMDB
+  BUF -->|D_K30a| BUS
+  BUS -->|D_K30b| BUF
+  NCG -->|D_K31a| BAD
+  BAD -->|D_K31a| ADU
+  ADU -->|D_K31b| NCG
+  NCG -->|D_K32a| BCA
+  BCA -->|D_K32a| CAR
+  CAR -->|D_K32b| NCG
+  NCG -->|D_K33a| IDN
+  IDN -->|D_K33b| NCG
+  NCG -->|D_K34| RADB
+  EXDB -->|D_K35| EXDB2
+  HCDB -->|D_K36| HCDBR
+  CAR -->|D_K37| HCDBR
+  HPDB -->|D_K38| HPDBR
+  TRS -->|D_K39| HPDBR
+  BTR -->|D_K40a| TRA
+  BAD -->|D_K40a| ADU
+  BRI -->|D_K40a| RSK
+  BCA -->|D_K40a| CAR
+  BTS -->|D_K40a| TRS
+  TRA -->|D_K40b| BTR
+  ADU -->|D_K40b| BAD
+  RSK -->|D_K40b| BRI
+  CAR -->|D_K40b| BCA
+  TRS -->|D_K40b| BTS
+  SCN -->|D_K41| BEN
+  BEN -->|D_K41| NCG
+  BTR -->|D_K42| CES
+  BAD -->|D_K42| CES
+  BRI -->|D_K42| CES
+  BCA -->|D_K42| CES
+  BTS -->|D_K42| CES
+  CES -->|D_K43| NCG
+  CES -->|D_K43| TRA
+  CES -->|D_K43| ADU
+  CES -->|D_K43| RSK
+  CES -->|D_K43| CAR
+  CES -->|D_K43| TRS
+  BEN -->|D_K44a| NCG
+  NCG -->|D_K44b| BEN
+  BEN -->|D_K45| CES
+  ADP -->|D_K46a| NCG
+  NCG -->|D_K46b| ADP
+  BUS -->|D_K47| NCG
+  RGW -->|SoS_K5| BEN
+  BEN -->|SoS_K5| NCG
+  RGW -->|SoS_K6| BEN
+  BEN -->|SoS_K6| NCG
+  PGW -->|SoS_K8| BEN
+  BEN -->|SoS_K8| NCG
+  PGW -->|SoS_K9a| BEN
+  BEN -->|SoS_K9a| NCG
+  NCG -->|SoS_K9b| PGW
+  CGW -->|SoS_K11| BEN
+  BEN -->|SoS_K11| NCG
+  CGW -->|SoS_K12a| BEN
+  BEN -->|SoS_K12a| NCG
+  NCG -->|SoS_K12b| CGW
+  LGW -->|SoS_K13| BEN
+  BEN -->|SoS_K13| NCG
+  LGW -->|SoS_K14| BEN
+  BEN -->|SoS_K14| NCG
+  FGW -->|SoS_K15| BEN
+  BEN -->|SoS_K15| NCG
+  FGW -->|SoS_K16| BEN
+  BEN -->|SoS_K16| NCG
+  RGW -->|SoS_K17a| BEN
+  BEN -->|SoS_K17a| NCG
+  NCG -->|SoS_K17b| RGW
+  LGW -->|SoS_K18a| BEN
+  BEN -->|SoS_K18a| NCG
+  NCG -->|SoS_K18b| LGW
+  FGW -->|SoS_K19a| BEN
+  BEN -->|SoS_K19a| NCG
+  NCG -->|SoS_K19b| FGW
+  PGW -->|SoS_K20a| BEN
+  BEN -->|SoS_K20a| NCG
+  NCG -->|SoS_K20b| PGW
+  CGW -->|SoS_K21a| BEN
+  BEN -->|SoS_K21a| NCG
+  NCG -->|SoS_K21b| CGW
+  CGW -->|SoS_K29| BEN
+  BEN -->|SoS_K29| NCG
+  PGW -->|SoS_K30| BEN
+  BEN -->|SoS_K30| NCG
+  NCG -->|SoS_K32| CGW
+  NCG -->|SoS_K33| PGW
+  NCG -->|SoS_K34| LGW
+  NCG -->|SoS_K35| FGW
+  RGW -->|SoS_K36| BEN
+  BEN -->|SoS_K36| NCG
