@@ -190,6 +190,70 @@ def check_model(model):
                     _error(f'{a.name}: {s.ref.name} needs buffer and event_capacity', a)
 
 
+    check_scenarios(model, connectors)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Delivery 4. Constraints C6 and C7 of Laboratory 5 are C12 and C13 here, because C6
+# (layers) and C7 (no command crosses a boundary) were already taken in Delivery 3.
+# ─────────────────────────────────────────────────────────────────────────────
+
+SIX_PARTS = ('source', 'stimulus', 'artifact', 'environment', 'response')
+
+
+def _capacity(component):
+    return component.capacity or component.event_capacity
+
+
+def check_scenarios(model, connectors):
+    hops = {(a, b) for k in connectors for link in k.links for a, b in zip(link.path, link.path[1:])}
+    for s in getattr(model, 'scenarios', None) or []:
+        # C12 [L5 C6]. Every hop of a workload follows a connector of the model, in
+        # either direction: the stimulus travels only along the declared structure.
+        for w in s.workloads or []:
+            for a, b in zip(w.path, w.path[1:]):
+                if (a, b) not in hops and (b, a) not in hops:
+                    _error(f'{s.name}: {w.name} goes from {a.name} to {b.name} without a connector', w)
+
+        # C13 [L5 C7]. A component that fails in a scenario has a capacity.
+        for f in s.faults or []:
+            if not _capacity(f.target):
+                _error(f'{s.name}: fault on {f.target.name}, which has no capacity', f)
+
+        # C14 [D4]. A quality scenario has its six parts: if it declares one of source,
+        # stimulus, artifact, environment and response, it declares all of them, and its
+        # response measure is verified in one of three ways: simulated (workloads,
+        # measures and run), verified by an analysis of the model, or declared not
+        # verifiable with the concept that is missing.
+        declared = [p for p in SIX_PARTS if getattr(s, p, None)]
+        if declared:
+            missing = [p for p in SIX_PARTS if not getattr(s, p, None)]
+            if missing:
+                _error(f'{s.name}: quality scenario without {", ".join(missing)}', s)
+        simulated = bool(s.workloads)
+        if simulated and (not s.measures or s.duration is None):
+            _error(f'{s.name}: a simulated scenario needs at least one measure and its run', s)
+        if s.measures and not simulated:
+            _error(f'{s.name}: a measure needs a workload to measure', s)
+        if declared and not (simulated or s.checks or s.missing):
+            _error(f'{s.name}: the response measure is neither simulated, verified by an '
+                   f'analysis, nor declared not verifiable', s)
+        if s.missing and (simulated or s.checks):
+            _error(f'{s.name}: declared not verifiable, but it is also verified', s)
+        for m in s.measures or []:
+            if m.workload is not None and m.workload not in s.workloads:
+                _error(f'{s.name}: measure on {m.workload.name}, a workload of another scenario', m)
+
+    # C15 [D4]. A tactic is linked to what it changes and to a scenario whose measure is
+    # verified, so its effect is verified, not assumed (Laboratory 5, section 6).
+    for t in getattr(model, 'tactics', None) or []:
+        if not (t.introduces or t.changes):
+            _error(f'{t.name}: tactic that introduces or changes no element', t)
+        for s in t.scenarios:
+            if s.missing or not (s.workloads or s.checks):
+                _error(f'{t.name}: motivated by {s.name}, whose measure is not verified', t)
+
+
 def create_metamodel():
     grammar = os.path.join(os.path.dirname(__file__), 'arch.tx')
     # auto_init_attributes=False distinguishes unwritten attributes (None) from 0.

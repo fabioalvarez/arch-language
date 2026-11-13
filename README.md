@@ -22,10 +22,12 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 | Archivo | Contenido |
 |---------|-----------|
 | `arch.tx` | Gramática (M2). Adaptaciones del equipo marcadas `[D]` |
-| `metamodel.py` | Restricciones C1–C7 |
+| `metamodel.py` | Restricciones C1–C15 |
+| `simulation.py`, `verification.py` | Simulación y verificación (Laboratorio 5, extendido [D4]) |
+| `correspondence.py` | Correspondencia entre `sos.arch` y cada modelo de constituyente (C16) |
 | `transformations.py` | Tabla de conectores, vista C&C y análisis |
 | `generation.py` | Lee cada modelo, verifica la conformidad y aplica las transformaciones |
-| `models/` | `sos.arch` (conjunto), `ncs-e1.arch`, `ncs-e2.arch` |
+| `models/` | `sos.arch` (conjunto), `ncs-e1.arch`, `ncs-e2.arch`, `ncs-e4.arch` (rediseño de la Entrega 4) |
 | `invalid/` | Un modelo mal formado por restricción agregada o adaptada, y los mensajes esperados |
 | `out/` | Artefactos generados |
 | `tools/gen_models.py` | Ayuda que escribió los modelos a partir de las tablas de la Entrega 2 |
@@ -73,6 +75,61 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 | SoS-QS1 (M4), `sos.arch` | — | 780.000 ms, cumple | 780 s | Ninguna; lenguaje base |
 | SoS-QS1 (M4), modelos del NCS | 7.740 s, no cumple | 780 s con el presupuesto acordado (NCG = 230 s); con la medida corregida de D-QS10 (1.920 s) serían 2.470 s, no cumple | Sin cifra → 780 s | Pendiente para la P4: la medida del NCS supera su presupuesto |
 | SoS-QS1 (M3), modelos del NCS | No aplica (SoS-K36 no existe) | 55 s, cumple | 55 s | Ninguna; no se puede escribir en `sos.arch` con el lenguaje base |
+
+## Entrega 4 — Verificación (equipo D)
+
+El lenguaje se extiende con lo que la verificación necesita, siguiendo el Laboratorio 5. Todo es opcional: los modelos de la Entrega 3 y los de los equipos A y C siguen siendo válidos.
+
+### Ejecución
+
+```bash
+docker build -f Dockerfile.verification -t lssa-team-d-verif .
+docker run --rm -v "$PWD:/app" lssa-team-d-verif                       # models/ncs-e1, e2 y e4
+docker run --rm -v "$PWD:/app" lssa-team-d-verif models/ncs-e4.arch    # un modelo
+docker run --rm -v "$PWD:/app" --entrypoint python lssa-team-d-verif \
+  correspondence.py models/sos.arch models/ncs-e2.arch models/ncs-e4.arch
+```
+
+Cada modelo deja en `out/<modelo>/` el grafo (`graph.png`) y el informe (`verification.md`). Cada corrida tarda menos de un minuto.
+
+### Extensiones del lenguaje
+
+| Extensión | Marca | Para qué |
+|-----------|-------|----------|
+| `capacity` y `store` en componentes | [L5] | Tasa de servicio de una instancia; un `store` retiene los trabajos mientras el siguiente componente está caído |
+| `scenario` con `workload`, `fault`, `vary`, `measure` y `run` | [L5] | Simular un escenario sobre la estructura del modelo, con réplicas y semillas |
+| Seis partes del escenario: `source`, `stimulus`, `artifact`, `environment`, `response`, más `attribute` | [D4] | El escenario como elemento del modelo; el artefacto refiere elementos del modelo |
+| `verified_by` y `not_verifiable` | [D4] | La medida de un escenario se simula, se verifica con un análisis del modelo, o se declara no verificable con lo que falta |
+| `tactic ... for ... introduces ... changes ...` | [D4] | Cada táctica ligada a los escenarios que la motivan y a los elementos que introduce o cambia |
+| `compact n` en una carga | [D4] | Compactación de la Entrega 2: mientras un store retiene la carga, solo quedan sus últimos n eventos |
+| `mttr` en un análisis | [D4] | Tiempo medio de reparación para simular la disponibilidad (4 h por defecto) |
+
+Diferencias con el simulador del Laboratorio 5, todas [D4]: la capacidad de un componente es `capacity` (o `event_capacity`) × `instances`; un store que está caído retiene lo que recibe (la salida de Carretera mientras cae); la recuperación se mide en el último componente de cada carga, y sin carga se toma la más lenta, porque los consumidores de clases de evento distintas no son intercambiables; y la disponibilidad de los análisis que un escenario nombra en `verified_by` se simula por Monte Carlo, con la fórmula del Laboratorio 3 como caso de resultado conocido.
+
+### Restricciones nuevas
+
+C6 y C7 del Laboratorio 5 ya estaban ocupadas (capas y comandos, Entrega 3), así que aquí son C12 y C13.
+
+| ID | Restricción | Origen | Modelo rechazado |
+|----|-------------|--------|------------------|
+| C12 | Cada tramo de una carga sigue un conector del modelo | Laboratorio 5, C6 | `c12-workload-hop.arch` |
+| C13 | Un componente que falla en un escenario tiene capacidad | Laboratorio 5, C7 | `c13-fault-capacity.arch` |
+| C14 | Un escenario de calidad tiene sus seis partes, y su medida se simula, se verifica con un análisis o se declara no verificable | Entrega 4, §3.1 | `c14-six-parts.arch` |
+| C15 | Una táctica cambia o introduce algún elemento y la motiva un escenario cuya medida se verifica | Entrega 4, §3.1; Laboratorio 5, §6 | `c15-tactic-unverified.arch` |
+| C16 (correspondencia) | `correspondence.py`: los componentes de frontera y los conectores globales de un modelo de constituyente coinciden con `sos.arch` (K1 componentes, K2 naturaleza, acoplamiento, información, acuerdo y extremos de frontera; K3 ningún conector global falta) | Entrega 4, §3.1 | `k2-correspondence.arch` |
+
+`ncs-e2.arch` y `ncs-e4.arch` corresponden con `sos.arch`. `ncs-e1.arch` no: le faltan SoS-K29 a SoS-K36, que el acuerdo v4 agregó en la Entrega 2 después de la estructura de partida.
+
+### Resultados
+
+| Propiedad | e1 | e2 | e4 (rediseño) |
+|-----------|----|----|---------------|
+| S1 en el artefacto de D-QS1 | Violada: 7 elementos únicos | Violada: BEN, BTR, BAD, BRI | Satisfecha |
+| D-QS1, Monte Carlo (40 × 20 años) | 99,305 % [99,285; 99,325], violada | 99,549 % [99,536; 99,563] con balanceadores, violada | 99,957 % [99,953; 99,961], con margen |
+| D-QS10, recuperación (10 réplicas) | 7.213 s (TRS), violada | 1.917,7 s (CAR) [1.905,8; 1.929,5], violada | 183,9 s [182,2; 185,5], con margen |
+| Custodias perdidas | 0 | 0 | 0 |
+
+Todos los valores conocidos (fórmula del Laboratorio 3 y vaciado de fluido) caen dentro de los intervalos. En e4, la sensibilidad a la capacidad de CAR por instancia da violada hasta 30 ev/s, inconclusa en 32,1 ev/s (229,8 s [228,2; 231,4]) y satisfecha desde 35 ev/s.
 
 ## Equipo A — Sistema de Gestión de Puertos del Caribe (CPMS)
 

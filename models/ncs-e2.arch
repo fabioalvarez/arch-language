@@ -27,7 +27,7 @@ component BUF "Búfer de Eventos" in NCS tier T2 kind software domain Integracio
 // T2 — boundary components of the other constituents (as in sos.arch)
 component CGW "Caribbean Port Gateway" in CPS tier T2 kind software latency 300000
 component PGW "Pacific Port Gateway" in PPS tier T2 kind software
-component RGW "Road Gateway" in RTS tier T2 kind software latency 200000
+component RGW "Road Gateway" in RTS tier T2 kind software latency 200000 capacity 10000 store
 component LGW "Rail Gateway" in RLS tier T2 kind software
 component FGW "Fluvial Gateway" in FTS tier T2 kind software
 // T3
@@ -377,3 +377,65 @@ analysis SoSQS1M4 scenario "SoS-QS1 (M4)" deadline target 900 :
   [CGW = 300 | PGW = 300 | LGW = 300 | FGW = 300]
 analysis SoSQS1M3 scenario "SoS-QS1 (M3)" deadline target 60 :
   RGW = 30, SoS_K36 = 10, NCG = 15
+
+// Scenarios for verification (Delivery 4). Six parts reconstructed from Delivery 3
+// [PENDIENTE: confirmar con la Entrega 2].
+scenario QS_D1 "D-QS1" attribute "disponibilidad"
+  source "Falla interna de un elemento del NCS (hardware o software)"
+  stimulus "Un elemento de la cadena de levante deja de responder"
+  artifact NCG, TRA, ADU, RSK, EXDB, EXDB2
+  environment "Operación normal, con solicitudes de levante de los puertos"
+  response "La cadena sigue decidiendo levantes; la falla se enmascara con réplicas"
+  verified_by DQS1, DQS1Balancers
+
+// D-QS10: Carretera cae 4 h (14 400 s) y al volver reenvía lo que retuvo. RGW (la salida de
+// Carretera) es un store: retiene lo que recibe mientras está caído. Su capacidad de
+// reenvío es un parámetro de otro dueño (supuesto: 10 000 eventos/s, reenvío casi
+// inmediato), así que la recuperación medida es la del NCS. Custodias (1/s) solo las
+// consume CAR; posiciones (20/s) solo TRS; CAR recibe además 0,5 eventos/s de carga
+// propia de los puertos (event_load 1,5).
+scenario QS_D10 "D-QS10" attribute "recuperabilidad"
+  source "Sistema de Transporte Carretero (RTS), al recuperarse de una caída"
+  stimulus "Reenvío de las custodias y posiciones retenidas durante 4 h"
+  artifact NCG, BUS, CAR, TRS
+  environment "Recuperación tras la caída de Carretera, con la carga normal en curso"
+  response "El NCS consolida el rezago y vuelve a dar estado al día"
+  verified_by DQS10
+  workload Custody rate 1 : RGW -> BEN -> NCG -> BTR -> TRA -> BUF -> BUS -> BCA -> CAR
+  workload Positions rate 20 compact 6000 : RGW -> BEN -> NCG -> BTR -> TRA -> BUF -> BUS -> BTS -> TRS
+  workload OtherCargo rate 0.5 : TRA -> BUF -> BUS -> BCA -> CAR
+  fault RGW down at 0 for 14400
+  measure recovery Custody <= 230 s
+  measure recovery Positions <= 230 s
+  measure recovery <= 230 s
+  measure lost Custody <= 0 events
+  run 17000 warmup 0 replications 10
+
+// Scenarios that the language cannot verify (Delivery 3, section 7). Their six parts are in
+// Delivery 2 and are not repeated here [PENDIENTE: copiarlas de la Entrega 2].
+scenario QS_D2 "D-QS2" attribute "disponibilidad"
+  not_verifiable "Clases de evento con prioridad y una regla de descarte (compactación) en el Bus"
+scenario QS_D3 "D-QS3" attribute "seguridad"
+  not_verifiable "Identidad, credenciales y límites de confianza por conector"
+scenario QS_D4 "D-QS4" attribute "desempeño"
+  not_verifiable "Tasas de llegada y capacidad en consultas por componente (p99_latency ya existe desde el Laboratorio 5)"
+scenario QS_D5 "D-QS5" attribute "escalabilidad"
+  not_verifiable "Capacidad y carga de consultas por instancia frente al crecimiento"
+scenario QS_D6 "D-QS6" attribute "elasticidad"
+  not_verifiable "Perfiles de carga en el tiempo y costo por instancia-hora"
+scenario QS_D7 "D-QS7" attribute "integridad"
+  not_verifiable "Atributos del modelo canónico por conector; model checking de la regla de descarte de duplicados"
+scenario QS_D8 "D-QS8" attribute "interoperabilidad"
+  not_verifiable "Versión de cada conector y período de convivencia de versiones"
+scenario QS_D9 "D-QS9" attribute "disponibilidad"
+  not_verifiable "Plazos (timeouts), período de latido y reintentos"
+scenario QS_M1 "SoS-QS1 (M1)" attribute "desempeño"
+  not_verifiable "Reglas de comportamiento; model checking sobre una máquina de estados de despacho"
+scenario QS_M2 "SoS-QS1 (M2)" attribute "desempeño"
+  not_verifiable "Distribuciones del error de estimación y su simulación"
+
+// Tactics of Delivery 2 [PENDIENTE: confirmar nombres y elementos con la Entrega 2]
+tactic TE2_Redundancy "Redundancia activa" for QS_D1, QS_D10 changes NCG, TRA, ADU, RSK, CAR, TRS
+tactic TE2_Backup "Respaldo del Expediente Aduanero" for QS_D1 introduces EXDB2
+tactic TE2_Balancing "Balanceo de carga entre réplicas" for QS_D1 introduces BEN, BTR, BAD, BRI, BCA, BTS
+tactic TE2_Compaction "Compactación de posiciones en el rezago" for QS_D10 introduces BUF

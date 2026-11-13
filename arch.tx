@@ -3,11 +3,17 @@
 // adaptations of team A (Caribbean Port, CPMS) are marked [A]; adaptations of
 // team C (Road Transportation, RTS) are marked [C]. Every [A] and [C] change is an
 // addition: the models written for [D] and [A] keep their meaning.
+// Delivery 4: the elements of Laboratory 5 for verification (capacity, store, and
+// scenarios with workloads, faults, varied parameters and measures) are marked [L5];
+// scenarios with their six parts and tactics as elements are marked [D4]. Every
+// addition is optional, so the models of Delivery 3 keep conforming.
 Model:
   'system' name=ID
   constituents+=Constituent
   elements+=Element
   analyses*=Analysis
+  scenarios*=Scenario                       // [L5, D4]
+  tactics*=Tactic                           // [D4]
 ;
 
 Constituent:
@@ -32,6 +38,8 @@ Component:
   ('period' period=NUMBER)?                 // [C] period of periodic publication (ms)
   ('misses' misses=NUMBER)?                 // [C] missed periods before detection
   ('buffer' buffer=NUMBER)?                 // [C] retention capacity (events)
+  ('capacity' capacity=NUMBER)?             // [L5] service rate of one instance (requests or events/s)
+  (store?='store')?                         // [L5] holds the jobs while the next component is down
 ;
 
 Connector:
@@ -60,6 +68,7 @@ Analysis:
   ('backlog' backlog=NUMBER)?               // [D] events to absorb (recovery)
   'target' target=NUMBER
   ('outage' outage=NUMBER)?                 // [C] outage duration in seconds (drain)
+  ('mttr' mttr=NUMBER)?                     // [D4] mean time to repair (h) for the simulation of availability
   ':'
   factors+=Factor[',']
 ;
@@ -81,6 +90,58 @@ Single:
 Group:
   '[' members+=Single['|'] ']' ('beta' beta=NUMBER)?
 ;
+
+// [L5] A scenario for simulation, extended in [D4] with the six parts of a quality
+// scenario. The artifact refers to elements of the model. A scenario that the model
+// cannot simulate keeps its six parts and is either verified by an analysis of the
+// model or declared not verifiable, with the concept or technique that is missing.
+Scenario:
+  'scenario' name=ID label=STRING
+  ('attribute' attribute=STRING)?                                 // [D4]
+  ('source' source=STRING)?                                     // [D4]
+  ('stimulus' stimulus=STRING)?                                 // [D4]
+  ('artifact' artifact+=[Element|Ident][','])?                  // [D4]
+  ('environment' environment=STRING)?                           // [D4]
+  ('response' response=STRING)?                                 // [D4]
+  ('verified_by' checks+=[Analysis][','])?                      // [D4] analyses of the model
+  ('not_verifiable' missing=STRING)?                            // [D4] what the language lacks
+  workloads*=Workload
+  faults*=Fault
+  vary=Vary?
+  measures*=Measure
+  ('run' duration=NUMBER 'warmup' warmup=NUMBER 'replications' replications=INT)?
+;
+
+// [L5] Poisson arrivals that follow the path. [D4] 'compact n': while a store holds the
+// jobs of this workload, only the last n are kept (compaction of Delivery 2); the
+// others are superseded, not lost.
+Workload:
+  'workload' name=ID 'rate' rate=NUMBER ('compact' compact=INT)? ':' path+=[Component|Ident]['->']
+;
+
+Fault: 'fault' target=[Component|Ident] 'down' 'at' start=NUMBER 'for' length=NUMBER;
+
+Vary: 'vary' target=[Varied|Ident] ':' values+=NUMBER[','];
+
+Varied: Workload | Component;
+
+// [L5] Response measure. [D4] 'recovery' with a workload measures that workload alone,
+// at its last component; without one, the slowest workload that the fault holds.
+Measure:
+  'measure' metric=MeasureMetric (workload=[Workload])? '<=' threshold=NUMBER unit=Unit
+;
+
+// [D4] A tactic or pattern, linked to the scenarios that motivate it and to the
+// elements it introduces or changes.
+Tactic:
+  'tactic' name=ID label=STRING
+  'for' scenarios+=[Scenario][',']
+  ('introduces' introduces+=[Element|Ident][','])?
+  ('changes' changes+=[Element|Ident][','])?
+;
+
+MeasureMetric: 'p99_latency' | 'lost' | 'recovery';
+Unit: 'ms' | 's' | 'events';
 
 Tier: 'T1' | 'T2' | 'T3' | 'T4' | 'T5';
 Kind: 'hardware_software' | 'hardware' | 'software' | 'physical';
