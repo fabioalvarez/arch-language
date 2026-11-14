@@ -1,0 +1,5 @@
+# Verification (Laboratory 5, section 4.5): graph, structural properties, simulation, report.
+FROM python:3.11-slim
+WORKDIR /app
+RUN pip install --no-cache-dir textX==4.3.0 networkx==3.4.2 matplotlib==3.9.2
+ENTRYPOINT ["python", "verification.py"]

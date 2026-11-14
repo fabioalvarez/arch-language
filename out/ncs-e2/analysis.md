@@ -30,13 +30,12 @@ Chain availability: **99.55 %** (39.4 h/year); target 99.9: **NOT met**
 
 ## DQS10 (Scenario D-QS10)
 
-| Consumer | Capacity (events/s × instances) | Load (events/s) | Spare (events/s) |
-|----------|----------------------------------|-----------------|------------------|
-| CAR | 4.5 × 2 | 1.5 | 7.5 |
-| TRS | 60 × 2 | 20 | 100 |
-| **Total** | | | **107.5** |
+| Consumer | Share of the backlog (events) | Capacity (events/s × instances) | Load (events/s) | Spare (events/s) | Time |
+|----------|-------------------------------|----------------------------------|-----------------|------------------|------|
+| CAR | 14400 | 4.5 × 2 | 1.5 | 7.5 | 1920.0 s |
+| TRS | 6000 | 60 × 2 | 20 | 100 | 60.0 s |
 
-Recovery time: **189.8 s** (20400 events / 107.5 events/s); target 230: **met**
+Recovery time: **1920.0 s** (slowest consumer: CAR; backlog 20400 events); target 230: **NOT met**
 
 ## SoSQS1M4 (Scenario SoS-QS1 (M4))
 

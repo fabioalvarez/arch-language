@@ -22,10 +22,13 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 | Archivo | Contenido |
 |---------|-----------|
 | `arch.tx` | Gramática (M2). Adaptaciones del equipo marcadas `[D]` |
-| `metamodel.py` | Restricciones C1–C7 |
+| `metamodel.py` | Restricciones C1–C15 |
+| `simulation.py`, `verification.py` | Simulación y verificación (Laboratorio 5, extendido [D4]) |
+| `correspondence.py` | Correspondencia entre `sos.arch` y cada modelo de constituyente (C16) |
+| `tactics_check.py` | Justificación de las tácticas de la iteración 4: aporte de cada una a D-QS1, sensibilidad a β y alternativa descartada a T-R3 [D4] |
 | `transformations.py` | Tabla de conectores, vista C&C y análisis |
 | `generation.py` | Lee cada modelo, verifica la conformidad y aplica las transformaciones |
-| `models/` | `sos.arch` (conjunto), `ncs-e1.arch`, `ncs-e2.arch` |
+| `models/` | `sos.arch` (conjunto), `ncs-e1.arch`, `ncs-e2.arch`, `ncs-e4.arch` (rediseño de la Entrega 4) |
 | `invalid/` | Un modelo mal formado por restricción agregada o adaptada, y los mensajes esperados |
 | `out/` | Artefactos generados |
 | `tools/gen_models.py` | Ayuda que escribió los modelos a partir de las tablas de la Entrega 2 |
@@ -40,15 +43,16 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 | Presupuesto por factor (`= valor`) | Gramática | Un presupuesto es un término del escenario, no una propiedad del elemento: el NCS tiene 230 s en M4 y 15 s en M3 |
 | `beta` en un factor simple | Gramática, análisis | Componente con `instances` ≥ 2 y fracción de causa común, sin duplicar el componente |
 | Métrica `deadline` | Análisis | Suma de presupuestos; un grupo trabaja en paralelo y cuenta su máximo (M4) |
-| Métrica `recovery` con `backlog` | Análisis | Tiempo = rezago / Σ(capacidad × instancias − carga) |
+| Métrica `recovery` con `backlog` | Análisis, C5 | Cada consumidor absorbe solo su parte del rezago (`CAR = 14400`) con su propia capacidad libre; manda el más lento: tiempo = máx(parteᵢ / (capacidadᵢ × instanciasᵢ − cargaᵢ)). Corregido tras la Entrega 3: antes se sumaban capacidades de consumidores distintos |
 
 ## Restricciones
 
 | ID | Restricción | Origen | Modelo rechazado |
 |----|-------------|--------|------------------|
-| C1–C3 | Sin cambios (Laboratorio 4) | — | — |
+| C1–C2 | Sin cambios (Laboratorio 4) | — | — |
+| C3 (corregida) | Todo conector de frontera tiene acuerdo, y cada tramo que cruza la frontera une dos componentes T2: un conector con acuerdo conectado directo a un T3 o T4 se rechaza. Mismo mensaje que C8 [A] | Corrección de la Entrega 3 | `c3-boundary-tier.arch` |
 | C4 (adaptada) | Un almacén T4 solo se accede por dependencia desde componentes de su dominio; sin dominio, rige la regla del Laboratorio 4 | Regla de datos por dominio del NCS | `c4-domain.arch`, `c4-lab4-rule.arch` |
-| C5 (extendida) | Cada factor tiene la propiedad que su métrica necesita, incluidas `deadline` y `recovery` | U5, Lectura 2, §4.2 | `c5-deadline.arch`, `c5-recovery.arch` |
+| C5 (extendida) | Cada factor tiene la propiedad que su métrica necesita, incluidas `deadline` y `recovery`; en `recovery` con varios consumidores, cada uno lleva su parte del rezago y las partes suman el rezago | U5, Lectura 2, §4.2; corrección de la Entrega 3 | `c5-deadline.arch`, `c5-recovery.arch`, `c5-recovery-shares.arch` |
 | C6 (nueva, estilo) | Ningún componente T1 se une directamente a un almacén T4 | Estilo **en capas** del NCS (Entrega 1, §5) | `c6-layers.arch` |
 | C7 (nueva, estilo) | Ningún comando de control cruza la frontera de un constituyente | SoS **reconocido**: estilo jerárquico solo donde la autoridad es real (Entrega 1, nivel global) | `c7-command.arch` |
 
@@ -59,7 +63,8 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 - Un par solicitud/respuesta se clasifica como bloqueante en sus dos conectores. D-K1, que en la Entrega 2 es bloqueante para solicitudes y sumidero para eventos, se clasifica como bloqueante (la más restrictiva).
 - Disponibilidad de 99,9 % (L17) en cada elemento que entra en una cadena. `event_capacity` = 3 veces la carga normal (L19), repartida entre los consumidores del Bus: Carga 1,5 → 4,5 eventos/s y Tránsito 20 → 60 eventos/s.
 - `sos.arch` usa solo el lenguaje base. Los presupuestos de M4 van en ms y cada tramo lo lleva un elemento distinto, como K18 lleva la etapa 4 en el Laboratorio 4: RGW 200 s, SoS-K5 40 s, NCG 230 s, SoS-K32 10 s y CGW 300 s. CGW representa a los cuatro consumidores, que tienen el mismo presupuesto y trabajan en paralelo. M3 no cabe en el lenguaje base (RGW y NCG necesitarían un segundo valor): se analiza en los modelos del NCS con la métrica `deadline`. Los modelos del NCS repiten esas latencias en los elementos de frontera, que se escriben como en `sos.arch`.
-- En `ncs-e1.arch`, el tramo del NCS en M4 toma el resultado de `DQS10` en ese mismo modelo (7.033 s). M3 no se puede escribir porque SoS-K36 todavía no existe.
+- Partes del rezago de D-QS10 (Entrega 2, caída de Carretera de 4 h): 14.400 custodias (1 ev/s), que consume solo CAR, más 288.000 posiciones (20 ev/s) en e1 o 6.000 posiciones compactadas en e2, que consume solo TRS.
+- En `ncs-e1.arch`, el tramo del NCS en M4 toma el resultado de `DQS10` en ese mismo modelo (7.200 s). M3 no se puede escribir porque SoS-K36 todavía no existe.
 
 ## Resultados
 
@@ -67,10 +72,80 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 |-----------|-----------|--------------|-----------|------------|
 | D-QS1 | 99,30 %, no cumple | 99,95 %, cumple | 99,30 % → 99,95 % | Ninguna |
 | D-QS1 con balanceadores | — | 99,55 %, no cumple | No calculado | La Entrega 2 no contó los 4 balanceadores que la cadena atraviesa, cada uno sin copia |
-| D-QS10 | 7.032,6 s, no cumple | 189,8 s, cumple | ≈ 7.030 s → ≈ 190 s | Redondeo |
+| D-QS10 (corregido) | 7.200 s (TRS), no cumple | 1.920 s (CAR), no cumple | ≈ 7.030 s → ≈ 190 s | La Entrega 2 y la Entrega 3 sumaban la capacidad libre de CAR y TRS (189,8 s); cada uno solo consume su clase de evento |
 | SoS-QS1 (M4), `sos.arch` | — | 780.000 ms, cumple | 780 s | Ninguna; lenguaje base |
-| SoS-QS1 (M4), modelos del NCS | 7.573 s, no cumple | 780 s, cumple | Sin cifra → 780 s | La Entrega 2 no dio cifra para la estructura de partida |
+| SoS-QS1 (M4), modelos del NCS | 7.740 s, no cumple | 780 s con el presupuesto acordado (NCG = 230 s); con la medida corregida de D-QS10 (1.920 s) serían 2.470 s, no cumple | Sin cifra → 780 s | Pendiente para la P4: la medida del NCS supera su presupuesto |
 | SoS-QS1 (M3), modelos del NCS | No aplica (SoS-K36 no existe) | 55 s, cumple | 55 s | Ninguna; no se puede escribir en `sos.arch` con el lenguaje base |
+
+## Entrega 4 — Verificación (equipo D)
+
+El lenguaje se extiende con lo que la verificación necesita, siguiendo el Laboratorio 5. Todo es opcional: los modelos de la Entrega 3 y los de los equipos A y C siguen siendo válidos.
+
+### Ejecución
+
+```bash
+docker build -f Dockerfile.verification -t lssa-team-d-verif .
+docker run --rm -v "$PWD:/app" lssa-team-d-verif                       # models/ncs-e1, e2 y e4
+docker run --rm -v "$PWD:/app" lssa-team-d-verif models/ncs-e4.arch    # un modelo
+docker run --rm -v "$PWD:/app" --entrypoint python lssa-team-d-verif \
+  correspondence.py models/sos.arch models/ncs-e2.arch models/ncs-e4.arch
+docker run --rm -v "$PWD:/app" --entrypoint python lssa-team-d-verif tactics_check.py   # out/tactics/tactics.md
+```
+
+Cada modelo deja en `out/<modelo>/` el grafo (`graph.png`) y el informe (`verification.md`). Cada corrida tarda menos de un minuto.
+
+### Extensiones del lenguaje
+
+| Extensión | Marca | Para qué |
+|-----------|-------|----------|
+| `capacity` y `store` en componentes | [L5] | Tasa de servicio de una instancia; un `store` retiene los trabajos mientras el siguiente componente está caído |
+| `scenario` con `workload`, `fault`, `vary`, `measure` y `run` | [L5] | Simular un escenario sobre la estructura del modelo, con réplicas y semillas |
+| Seis partes del escenario: `source`, `stimulus`, `artifact`, `environment`, `response`, más `attribute` | [D4] | El escenario como elemento del modelo; el artefacto refiere elementos del modelo |
+| `verified_by` y `not_verifiable` | [D4] | La medida de un escenario se simula, se verifica con un análisis del modelo, o se declara no verificable con lo que falta |
+| `tactic ... for ... introduces ... changes ...` | [D4] | Cada táctica ligada a los escenarios que la motivan y a los elementos que introduce o cambia |
+| `compact n` en una carga | [D4] | Compactación de la Entrega 2: mientras un store retiene la carga, solo quedan sus últimos n eventos |
+| `mttr` en un análisis | [D4] | Tiempo medio de reparación para simular la disponibilidad (4 h por defecto) |
+
+Diferencias con el simulador del Laboratorio 5, todas [D4]: la capacidad de un componente es `capacity` (o `event_capacity`) × `instances`; un store que está caído retiene lo que recibe (la salida de Carretera mientras cae); la recuperación se mide en el último componente de cada carga, y sin carga se toma la más lenta, porque los consumidores de clases de evento distintas no son intercambiables; y la disponibilidad de los análisis que un escenario nombra en `verified_by` se simula por Monte Carlo, con la fórmula del Laboratorio 3 como caso de resultado conocido.
+
+### Restricciones nuevas
+
+C6 y C7 del Laboratorio 5 ya estaban ocupadas (capas y comandos, Entrega 3), así que aquí son C12 y C13.
+
+| ID | Restricción | Origen | Modelo rechazado |
+|----|-------------|--------|------------------|
+| C12 | Cada tramo de una carga sigue un conector del modelo | Laboratorio 5, C6 | `c12-workload-hop.arch` |
+| C13 | Un componente que falla en un escenario tiene capacidad | Laboratorio 5, C7 | `c13-fault-capacity.arch` |
+| C14 | Un escenario de calidad tiene sus seis partes, y su medida se simula, se verifica con un análisis o se declara no verificable | Entrega 4, §3.1 | `c14-six-parts.arch` |
+| C15 | Una táctica cambia o introduce algún elemento y la motiva un escenario cuya medida se verifica | Entrega 4, §3.1; Laboratorio 5, §6 | `c15-tactic-unverified.arch` |
+| C16 (correspondencia) | `correspondence.py`: los componentes de frontera y los conectores globales de un modelo de constituyente coinciden con `sos.arch` (K1 componentes, K2 naturaleza, acoplamiento, información, acuerdo y extremos de frontera; K3 ningún conector global falta) | Entrega 4, §3.1 | `k2-correspondence.arch` |
+
+`ncs-e2.arch` y `ncs-e4.arch` corresponden con `sos.arch`. `ncs-e1.arch` no: le faltan SoS-K29 a SoS-K36, que el acuerdo v4 agregó en la Entrega 2 después de la estructura de partida.
+
+### Resultados
+
+| Propiedad | e1 | e2 | e4 (rediseño) |
+|-----------|----|----|---------------|
+| S1 en el artefacto de D-QS1 | Violada: 7 elementos únicos | Violada: BEN, BTR, BAD, BRI | Satisfecha |
+| D-QS1, Monte Carlo (40 × 20 años) | 99,305 % [99,285; 99,325], violada | 99,549 % [99,536; 99,563] con balanceadores, violada | 99,957 % [99,953; 99,961], con margen |
+| D-QS10, recuperación (10 réplicas, semillas 1–10) | 7.211,2 s (TRS) [7.194,8; 7.227,6], violada | 1.932,8 s (CAR) [1.921,5; 1.944,1], violada | 184,9 s [183,8; 186,1], con margen |
+| Custodias perdidas | 0 | 0 | 0 |
+
+La simulación es determinista: con las mismas semillas da las mismas cifras en cada corrida (antes, `_stations` recorría un `set` de componentes y el orden de las estaciones, y con él las cifras de recuperación, cambiaba entre procesos).
+
+Valores conocidos. Disponibilidad: la fórmula del Laboratorio 3 cae dentro de los tres intervalos. Recuperación: el vaciado exacto de una cola M/M/1 que empieza con n trabajos es n / (μ − λ), y la medida agrega la espera hasta la primera llegada nueva, 1/λ (0,67 s para CAR, 0,05 s para TRS). Con eso, e1 da 7.200,1 s y e4 184,1 s, dentro de sus intervalos; e2 da 1.920,7 s, 0,8 s por debajo del suyo. El reenvío de RGW no agrega tiempo: con capacidad ilimitada en RGW la medida no cambia.
+
+En e4, la sensibilidad a la capacidad de CAR por instancia da violada hasta 32,1 ev/s (231,7 s [230,5; 233,0]), satisfecha sin margen en 35 ev/s (212,2 s [211,3; 213,0]) y con margen desde 40 ev/s.
+
+### Tácticas de la iteración 4
+
+`tactics_check.py` lee `ncs-e2.arch` y `ncs-e4.arch` y deja en `out/tactics/tactics.md` tres tablas que justifican el rediseño:
+
+| Pregunta | Resultado |
+|----------|-----------|
+| ¿Hacen falta T-R1 y T-R2 a la vez? | e2 99,549 % (violada); e2 + T-R1 99,906 % [99,900; 99,912] (inconclusa); e2 + T-R2 99,563 % (violada); e4 99,957 % (con margen). Las dos son necesarias |
+| ¿Hasta qué β aguanta e4? | Con margen hasta β = 0,08; sin margen hasta 0,10; inconclusa en 0,11–0,12; violada en 0,15. Límite analítico del margen: β ≈ 0,088 |
+| ¿Por qué lotes y no más instancias de CAR? | Con 4,5 ev/s por instancia hacen falta 15 instancias (220,0 s, sin margen); con 14, violada |
 
 ## Equipo A — Sistema de Gestión de Puertos del Caribe (CPMS)
 

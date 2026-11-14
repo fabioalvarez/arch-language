@@ -49,9 +49,20 @@ def check_model(model):
             sources = {link.path[0].name for link in k.links}
             if len(sources) > 1:
                 _error(f'{k.name}: control command with several sources {sorted(sources)}', k)
-        # C3. Every boundary connector is governed by an agreement among owners.
-        if _boundary(k) and not k.agreement:
-            _error(f'{k.name}: boundary connector without agreement', k)
+        # C3 [D, corrected after Delivery 3]. Every boundary connector is governed by an
+        # agreement among owners, and the agreement binds only boundary components: every
+        # hop of the connector that crosses a constituent joins two T2 components. A
+        # connector with an agreement attached directly to a T3 or T4 is rejected.
+        if _boundary(k):
+            if not k.agreement:
+                _error(f'{k.name}: boundary connector without agreement', k)
+            for link in k.links:
+                for a, b in zip(link.path, link.path[1:]):
+                    if a.system is not b.system and (a.tier != 'T2' or b.tier != 'T2'):
+                        bad = a if a.tier != 'T2' else b
+                        # Same message as C8 [A], so the rejections of team A do not change.
+                        _error(f'{k.name}: boundary link reaches {bad.name} (tier {bad.tier}); '
+                               f'only T2 boundary components may face another constituent', k)
         # C6 [D]. Layers (NCS, Delivery 1 section 5): no component of T1 is
         # joined directly to a data store of T4; every read goes through a T3 service.
         for link in k.links:
@@ -63,7 +74,9 @@ def check_model(model):
         if 'control_command' in k.natures and _boundary(k):
             _error(f'{k.name}: control command crosses the boundary of a constituent', k)
         # C8 [A, C]. Gateway pattern (Delivery 1): every link that crosses a boundary
-        # starts and ends at a boundary component of tier T2.
+        # starts and ends at a boundary component of tier T2. Since the correction of C3
+        # [D] the same check runs inside C3, with the same message; C8 is kept as the
+        # name team A gives to the gateway pattern.
         for link in k.links:
             for a, b in zip(link.path, link.path[1:]):
                 if a.system is not b.system and (a.tier != 'T2' or b.tier != 'T2'):
@@ -149,6 +162,21 @@ def check_model(model):
         if a.metric == 'recovery' and not a.backlog:
             _error(f'{a.name}: a recovery analysis needs its backlog', a)
 
+        # C5 [D, corrected after Delivery 3]. The spare capacity of two consumers is not
+        # interchangeable: each consumer absorbs only the events of its own class. With more
+        # than one consumer, every consumer carries its share of the backlog (= events),
+        # and the shares add up to the backlog.
+        if a.metric == 'recovery':
+            consumers = [s for f in a.factors for s in _singles(f)]
+            shares = [s.value for s in consumers]
+            if len(consumers) > 1 and any(v is None for v in shares):
+                missing = [s.ref.name for s in consumers if s.value is None]
+                _error(f'{a.name}: consumers are not interchangeable; {missing} '
+                       f'need their share of the backlog (= events)', a)
+            if all(v is not None for v in shares) and round(sum(shares), 6) != round(a.backlog, 6):
+                _error(f'{a.name}: the shares of the backlog add up to {sum(shares):g}, '
+                       f'not to {a.backlog:g}', a)
+
         if a.metric == 'drain':  # [C]
             steps = [s for f in a.factors for s in _singles(f)]
             if a.outage is None:
@@ -160,6 +188,70 @@ def check_model(model):
             for s in steps[1:]:
                 if s.ref.buffer is None or s.ref.event_capacity is None:
                     _error(f'{a.name}: {s.ref.name} needs buffer and event_capacity', a)
+
+
+    check_scenarios(model, connectors)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Delivery 4. Constraints C6 and C7 of Laboratory 5 are C12 and C13 here, because C6
+# (layers) and C7 (no command crosses a boundary) were already taken in Delivery 3.
+# ─────────────────────────────────────────────────────────────────────────────
+
+SIX_PARTS = ('source', 'stimulus', 'artifact', 'environment', 'response')
+
+
+def _capacity(component):
+    return component.capacity or component.event_capacity
+
+
+def check_scenarios(model, connectors):
+    hops = {(a, b) for k in connectors for link in k.links for a, b in zip(link.path, link.path[1:])}
+    for s in getattr(model, 'scenarios', None) or []:
+        # C12 [L5 C6]. Every hop of a workload follows a connector of the model, in
+        # either direction: the stimulus travels only along the declared structure.
+        for w in s.workloads or []:
+            for a, b in zip(w.path, w.path[1:]):
+                if (a, b) not in hops and (b, a) not in hops:
+                    _error(f'{s.name}: {w.name} goes from {a.name} to {b.name} without a connector', w)
+
+        # C13 [L5 C7]. A component that fails in a scenario has a capacity.
+        for f in s.faults or []:
+            if not _capacity(f.target):
+                _error(f'{s.name}: fault on {f.target.name}, which has no capacity', f)
+
+        # C14 [D4]. A quality scenario has its six parts: if it declares one of source,
+        # stimulus, artifact, environment and response, it declares all of them, and its
+        # response measure is verified in one of three ways: simulated (workloads,
+        # measures and run), verified by an analysis of the model, or declared not
+        # verifiable with the concept that is missing.
+        declared = [p for p in SIX_PARTS if getattr(s, p, None)]
+        if declared:
+            missing = [p for p in SIX_PARTS if not getattr(s, p, None)]
+            if missing:
+                _error(f'{s.name}: quality scenario without {", ".join(missing)}', s)
+        simulated = bool(s.workloads)
+        if simulated and (not s.measures or s.duration is None):
+            _error(f'{s.name}: a simulated scenario needs at least one measure and its run', s)
+        if s.measures and not simulated:
+            _error(f'{s.name}: a measure needs a workload to measure', s)
+        if declared and not (simulated or s.checks or s.missing):
+            _error(f'{s.name}: the response measure is neither simulated, verified by an '
+                   f'analysis, nor declared not verifiable', s)
+        if s.missing and (simulated or s.checks):
+            _error(f'{s.name}: declared not verifiable, but it is also verified', s)
+        for m in s.measures or []:
+            if m.workload is not None and m.workload not in s.workloads:
+                _error(f'{s.name}: measure on {m.workload.name}, a workload of another scenario', m)
+
+    # C15 [D4]. A tactic is linked to what it changes and to a scenario whose measure is
+    # verified, so its effect is verified, not assumed (Laboratory 5, section 6).
+    for t in getattr(model, 'tactics', None) or []:
+        if not (t.introduces or t.changes):
+            _error(f'{t.name}: tactic that introduces or changes no element', t)
+        for s in t.scenarios:
+            if s.missing or not (s.workloads or s.checks):
+                _error(f'{t.name}: motivated by {s.name}, whose measure is not verified', t)
 
 
 def create_metamodel():

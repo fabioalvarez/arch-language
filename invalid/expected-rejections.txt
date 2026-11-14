@@ -1,6 +1,12 @@
+invalid/c12-workload-hop.arch: REJECTED: QS_D10: Custody goes from BUS to CAR without a connector
+invalid/c13-fault-capacity.arch: REJECTED: QS_D10: fault on NCG, which has no capacity
+invalid/c14-six-parts.arch: REJECTED: QS_D1: quality scenario without environment
+invalid/c15-tactic-unverified.arch: REJECTED: TE2_Compaction: motivated by QS_D2, whose measure is not verified
+invalid/c3-boundary-tier.arch: REJECTED: SoS_K5: boundary link reaches CAR (tier T3); only T2 boundary components may face another constituent
 invalid/c4-domain.arch: REJECTED: RMDB: data store of domain Carga accessed from ['RSK']
 invalid/c4-lab4-rule.arch: REJECTED: EXDB: data store shared by ['ADU', 'RSK']
 invalid/c5-deadline.arch: REJECTED: SoSQS1M4: RGW has no budget (= value) for the deadline
+invalid/c5-recovery-shares.arch: REJECTED: DQS10: consumers are not interchangeable; ['CAR', 'TRS'] need their share of the backlog (= events)
 invalid/c5-recovery.arch: REJECTED: DQS10: TRS needs event_capacity and event_load
 invalid/c6-layers.arch: REJECTED: D_K13: HCDB (T4) joined directly to CCC (T1)
 invalid/c7-command.arch: REJECTED: SoS_K9b: control command crosses the boundary of a constituent
@@ -8,3 +14,6 @@ invalid/cpms-c4-store-shared.arch: REJECTED: T4.2: data store shared by ['T3.1',
 invalid/cpms-c8-boundary-not-at-gateway.arch: REJECTED: SoS_K1a: boundary link reaches T3.6 (tier T3); only T2 boundary components may face another constituent
 invalid/cpms-c9-equipment-with-two-authorities.arch: REJECTED: T5.1: equipment commanded by several authorities ['T3.10', 'T5.8']
 invalid/cpms-c10-event-with-blocking-coupling.arch: REJECTED: A-K22: event notification with blocking coupling (the publisher must not wait for the consumer)
+
+# correspondence.py models/sos.arch invalid/k2-correspondence.arch (the model conforms; it does not correspond):
+invalid/k2-correspondence.arch: does NOT correspond: K2: SoS_K5 differs in coupling: 'blocking' here, 'sink' in the joint model

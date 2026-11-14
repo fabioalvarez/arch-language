@@ -1,0 +1,248 @@
+// ILL-FORMED: a recovery analysis that pools the spare capacity of two consumers; C5 (corrected) rejects it
+system NCS
+
+constituent CPS "Sistema de Gestión de Puertos del Caribe" owner "Operadores portuarios de la costa Caribe"
+constituent PPS "Sistema de Gestión de Puertos del Pacífico" owner "Operadores portuarios de la costa Pacífica"
+constituent RTS "Sistema de Transporte Carretero" owner "Empresas transportadoras y operadores de flotas"
+constituent RLS "Sistema de Transporte Férreo" owner "Concesionarios férreos"
+constituent FTS "Sistema de Transporte Fluvial" owner "Operadores de navegación fluvial"
+constituent NCS "Sistema de Coordinación Nacional" owner "Autoridad nacional (transporte, aduanas y control)"
+
+// T1
+component CCC "Consola del Centro de Coordinación" in NCS tier T1 kind software
+component CAD "Consola Aduanera" in NCS tier T1 kind software domain Aduana
+component APP "Aplicación del Inspector" in NCS tier T1 kind software domain Aduana
+// T2
+component NCG "National Coordination Gateway" in NCS tier T2 kind software domain Integracion availability 99.9 latency 230000
+component TRA "Traductor de Mensajes Externos" in NCS tier T2 kind software domain Integracion availability 99.9
+component BUS "Bus de Eventos" in NCS tier T2 kind software domain Integracion
+component ADP "Adaptador de Escáneres" in NCS tier T2 kind software domain Aduana
+// T2 — boundary components of the other constituents (as in sos.arch)
+component CGW "Caribbean Port Gateway" in CPS tier T2 kind software latency 300000
+component PGW "Pacific Port Gateway" in PPS tier T2 kind software
+component RGW "Road Gateway" in RTS tier T2 kind software latency 200000
+component LGW "Rail Gateway" in RLS tier T2 kind software
+component FGW "Fluvial Gateway" in FTS tier T2 kind software
+// T3
+component CAR "Servicio de Carga" in NCS tier T3 kind software domain Carga availability 99.9 event_capacity 4.5 event_load 1.5
+component TRS "Servicio de Tránsito" in NCS tier T3 kind software domain Transito event_capacity 60 event_load 20
+component ADU "Servicio de Aduana" in NCS tier T3 kind software domain Aduana availability 99.9
+component RSK "Servicio de Riesgo" in NCS tier T3 kind software domain Aduana availability 99.9
+// T4
+component HCDB "Historial de Carga DB" in NCS tier T4 kind software domain Carga
+component RMDB "Repositorio de Manifiestos DB" in NCS tier T4 kind software domain Carga availability 99.9
+component HPDB "Historial de Posiciones DB" in NCS tier T4 kind software domain Transito
+component EXDB "Expediente Aduanero DB" in NCS tier T4 kind software domain Aduana availability 99.9
+// T5
+component SCN "Escáner de Inspección No Intrusiva" in NCS tier T5 kind physical domain Aduana
+
+// Internal connectors
+connector D_K1 nature data_flow coupling blocking
+  carries "Mensajes entrantes validados contra el CDM, con identidad del remitente"
+  : NCG -> TRA
+connector D_K2 nature data_flow coupling blocking
+  carries "Respuestas en CDM: certificados de levante y estados consolidados"
+  : TRA -> NCG
+connector D_K3 nature event_notification coupling sink
+  carries "Hechos operacionales: arribos, manifiestos, custodias, posiciones"
+  : TRA -> BUS
+connector D_K4a nature dependency coupling blocking
+  carries "Solicitud de trámite de levante"
+  : TRA -> ADU
+connector D_K4b nature data_flow coupling blocking
+  carries "Resultado y certificado de levante"
+  : ADU -> TRA
+connector D_K5a nature dependency coupling blocking
+  carries "Consulta de estado, con el constituyente solicitante"
+  : TRA -> CAR
+connector D_K5b nature data_flow coupling blocking
+  carries "Estado de la carga, solo si el solicitante participa en ella"
+  : CAR -> TRA
+connector D_K6 nature event_notification coupling sink
+  carries "Arribos, manifiestos, custodias y decisiones de levante"
+  : BUS -> CAR
+connector D_K7 nature dependency coupling blocking
+  carries "Lectura y escritura de la historia de cada carga"
+  : CAR -> HCDB
+connector D_K8 nature dependency coupling blocking
+  carries "Lectura y escritura de manifiestos"
+  : CAR -> RMDB
+connector D_K9 nature event_notification coupling supply
+  carries "Posiciones, estado de tránsito y eventos de viaje"
+  : BUS -> TRS
+connector D_K10 nature dependency coupling blocking
+  carries "Lectura y escritura de posiciones"
+  : TRS -> HPDB
+connector D_K11 nature event_notification coupling sink
+  carries "Alertas por desvío, detención prolongada o sello comprometido"
+  : TRS -> BUS
+connector D_K12a nature dependency coupling blocking
+  carries "Consulta de la última posición del vehículo que lleva una carga"
+  : CAR -> TRS
+connector D_K12b nature data_flow coupling blocking
+  carries "Última posición registrada"
+  : TRS -> CAR
+connector D_K13 nature event_notification coupling sink
+  carries "Alertas operacionales y de tránsito"
+  : BUS -> CCC
+connector D_K14a nature dependency coupling blocking
+  carries "Consulta del historial y estado de una carga"
+  : CCC -> CAR
+connector D_K14b nature data_flow coupling blocking
+  carries "Historia completa y estado consolidado"
+  : CAR -> CCC
+connector D_K15a nature dependency coupling blocking
+  carries "Solicitud de evaluación de riesgo"
+  : ADU -> RSK
+connector D_K15b nature data_flow coupling blocking
+  carries "Perfil de riesgo calculado y control sugerido"
+  : RSK -> ADU
+connector D_K16a nature dependency coupling blocking
+  carries "Solicitud de manifiesto y composición del embarque"
+  : RSK -> CAR
+connector D_K16b nature data_flow coupling blocking
+  carries "Manifiesto y actores involucrados"
+  : CAR -> RSK
+connector D_K17 nature dependency coupling blocking
+  carries "Lectura de antecedentes, sanciones e historial de inspecciones"
+  : RSK -> EXDB
+connector D_K18a nature dependency coupling blocking
+  carries "Consulta de los casos pendientes de revisión"
+  : CAD -> ADU
+connector D_K18b nature data_flow coupling blocking
+  carries "Casos pendientes, con su evaluación de riesgo y antecedentes"
+  : ADU -> CAD
+connector D_K19 nature control_command coupling blocking
+  carries "Decisión del funcionario: levante, escáner o inspección física"
+  : CAD -> ADU
+connector D_K20 nature dependency coupling blocking
+  carries "Lectura y escritura del expediente"
+  : ADU -> EXDB
+connector D_K21 nature control_command coupling blocking
+  carries "Orden de inspección no intrusiva"
+  : ADU -> ADP
+connector D_K22 nature control_command coupling blocking
+  carries "Instrucción en el protocolo del fabricante"
+  : ADP -> SCN
+connector D_K23 nature data_flow coupling blocking
+  carries "Imagen y lectura técnica"
+  : SCN -> ADP
+connector D_K24 nature data_flow coupling blocking
+  carries "Resultado estandarizado de la inspección"
+  : ADP -> ADU
+connector D_K25a nature dependency coupling blocking
+  carries "Consulta de las órdenes de inspección física asignadas"
+  : APP -> ADU
+connector D_K25b nature data_flow coupling blocking
+  carries "Órdenes de inspección física asignadas"
+  : ADU -> APP
+connector D_K26 nature data_flow coupling blocking
+  carries "Hallazgos y verificación del sello"
+  : APP -> ADU
+connector D_K27 nature event_notification coupling sink
+  carries "Decisión de levante emitida"
+  : ADU -> BUS
+
+// Global connectors in which the NCS participates (as in sos.arch)
+connector SoS_K5 nature event_notification coupling sink
+  carries "Custodia recibida por el transportador; v3: ETA al despachar"
+  agreement "Semántica de custodia; clave transferId (P8)"
+  latency 40000
+  : RGW -> NCG
+connector SoS_K6 nature event_notification coupling supply
+  carries "Posición del vehículo, estado del tránsito y eventos en ruta"
+  agreement "Reporte de posición; umbral P6 y clave P8"
+  : RGW -> NCG
+connector SoS_K8 nature event_notification coupling sink
+  carries "Arribo/zarpe de motonave y manifiesto en puertos del Pacífico"
+  agreement "Aviso de arribo y manifiesto (v1)"
+  : PGW -> NCG
+connector SoS_K9a nature dependency coupling blocking
+  carries "Solicitud de validación de levante previa a la salida por portería"
+  agreement "Contrato de levante aduanero (v1)"
+  : PGW -> NCG
+connector SoS_K9b nature data_flow coupling blocking
+  carries "Estado de levante: concedido, inspección requerida o retenido"
+  agreement "Contrato de levante aduanero (v1)"
+  : NCG -> PGW
+connector SoS_K11 nature event_notification coupling sink
+  carries "Arribo/zarpe de motonave y manifiesto en puertos del Caribe"
+  agreement "Aviso de arribo y manifiesto (v1)"
+  : CGW -> NCG
+connector SoS_K12a nature dependency coupling blocking
+  carries "Solicitud de validación de levante previa a la salida por portería"
+  agreement "Contrato de levante aduanero (v1)"
+  : CGW -> NCG
+connector SoS_K12b nature data_flow coupling blocking
+  carries "Estado de levante: concedido, inspección requerida o retenido"
+  agreement "Contrato de levante aduanero (v1)"
+  : NCG -> CGW
+connector SoS_K13 nature event_notification coupling sink
+  carries "Custodia recibida por el concesionario y composición del tren"
+  agreement "Semántica de custodia; clave transferId (P8)"
+  : LGW -> NCG
+connector SoS_K14 nature event_notification coupling supply
+  carries "Posición del convoy, estado del corredor y eventos de vía"
+  agreement "Reporte de posición; umbral P6 y clave P8"
+  : LGW -> NCG
+connector SoS_K15 nature event_notification coupling sink
+  carries "Custodia recibida por el operador fluvial"
+  agreement "Semántica de custodia; clave transferId (P8)"
+  : FGW -> NCG
+connector SoS_K16 nature event_notification coupling supply
+  carries "Posición de barcaza o remolcador y estado de navegación"
+  agreement "Reporte de posición; umbral P6 y clave P8"
+  : FGW -> NCG
+connector SoS_K17a nature dependency coupling blocking
+  carries "Consulta de estado consolidado de la carga en la que participa el transportador"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : RGW -> NCG
+connector SoS_K17b nature data_flow coupling blocking
+  carries "Estado consolidado limitado a su carga; v3: posición y ETA estimadas"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : NCG -> RGW
+connector SoS_K18a nature dependency coupling blocking
+  carries "Consulta de estado consolidado de la carga en la que participa el concesionario"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : LGW -> NCG
+connector SoS_K18b nature data_flow coupling blocking
+  carries "Estado consolidado limitado a su carga; v3: posición y ETA estimadas"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : NCG -> LGW
+connector SoS_K19a nature dependency coupling blocking
+  carries "Consulta de estado consolidado de la carga en la que participa el operador fluvial"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : FGW -> NCG
+connector SoS_K19b nature data_flow coupling blocking
+  carries "Estado consolidado limitado a su carga; v3: posición y ETA estimadas"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : NCG -> FGW
+connector SoS_K20a nature dependency coupling blocking
+  carries "Consulta de estado consolidado de la carga en la que participa el operador portuario"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : PGW -> NCG
+connector SoS_K20b nature data_flow coupling blocking
+  carries "Estado consolidado limitado a su carga; v3: posición y ETA estimadas"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : NCG -> PGW
+connector SoS_K21a nature dependency coupling blocking
+  carries "Consulta de estado consolidado de la carga en la que participa el operador portuario"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : CGW -> NCG
+connector SoS_K21b nature data_flow coupling blocking
+  carries "Estado consolidado limitado a su carga; v3: posición y ETA estimadas"
+  agreement "Contrato de estado consolidado; regla de acceso y tasa P7"
+  : NCG -> CGW
+
+// Analyses (Delivery 2, sections 6.1 and 8: structure before the decisions)
+analysis DQS1 scenario "D-QS1" availability target 99.9 :
+  NCG, TRA, ADU, RSK, CAR, RMDB, EXDB
+// Backlog of a 4 h outage of Road (Delivery 2): 14400 custody events (1 ev/s), consumed
+// only by CAR, and 288000 position reports (20 ev/s), consumed only by TRS.
+analysis DQS10 scenario "D-QS10" recovery backlog 302400 target 230 :
+  CAR, TRS
+// SoS-QS1 on the starting structure: the NCS stage is the result of DQS10 in this model
+// (7200 s); SoS-K32 to SoS-K36 do not exist yet, so M3 cannot be written.
+analysis SoSQS1M4 scenario "SoS-QS1 (M4)" deadline target 900 :
+  RGW = 200, SoS_K5 = 40, NCG = 7200,
+  [CGW = 300 | PGW = 300 | LGW = 300 | FGW = 300]
