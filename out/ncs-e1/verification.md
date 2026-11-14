@@ -20,9 +20,9 @@ Run 22000 s, warm-up 0 s, 10 replications (seeds 1–10); varied: —
 
 | Value | Measure | Estimate | 95 % CI | Threshold | Outcome |
 |-------|---------|----------|---------|-----------|---------|
-| — | recovery Custody | 4775.3 | [4709.5, 4841.1] | ≤ 230 s | Violated |
-| — | recovery Positions | 7213.0 | [7196.2, 7229.7] | ≤ 230 s | Violated |
-| — | recovery | 7213.0 | [7196.2, 7229.7] | ≤ 230 s | Violated |
+| — | recovery Custody | 4793.2 | [4744.9, 4841.4] | ≤ 230 s | Violated |
+| — | recovery Positions | 7211.2 | [7194.8, 7227.6] | ≤ 230 s | Violated |
+| — | recovery | 7211.2 | [7194.8, 7227.6] | ≤ 230 s | Violated |
 | — | lost Custody | 0.0 | [0.0, 0.0] | ≤ 0 events | Satisfied with margin |
 
 ## Scenarios not verifiable with this language

@@ -43,11 +43,11 @@ def _stations(scenario):
     succ, indeg = {}, {}
     for w in scenario.workloads:
         for c in w.path:
-            succ.setdefault(c, set())
+            succ.setdefault(c, {})          # [D4] dict, not set: deterministic order
             indeg.setdefault(c, 0)
         for a, b in zip(w.path, w.path[1:]):
             if b not in succ[a]:
-                succ[a].add(b)
+                succ[a][b] = None
                 indeg[b] += 1
     order, ready = [], [c for c in succ if indeg[c] == 0]
     while ready:

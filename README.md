@@ -128,10 +128,14 @@ C6 y C7 del Laboratorio 5 ya estaban ocupadas (capas y comandos, Entrega 3), as�
 |-----------|----|----|---------------|
 | S1 en el artefacto de D-QS1 | Violada: 7 elementos únicos | Violada: BEN, BTR, BAD, BRI | Satisfecha |
 | D-QS1, Monte Carlo (40 × 20 años) | 99,305 % [99,285; 99,325], violada | 99,549 % [99,536; 99,563] con balanceadores, violada | 99,957 % [99,953; 99,961], con margen |
-| D-QS10, recuperación (10 réplicas) | 7.213 s (TRS), violada | 1.917,7 s (CAR) [1.905,8; 1.929,5], violada | 183,9 s [182,2; 185,5], con margen |
+| D-QS10, recuperación (10 réplicas, semillas 1–10) | 7.211,2 s (TRS) [7.194,8; 7.227,6], violada | 1.932,8 s (CAR) [1.921,5; 1.944,1], violada | 184,9 s [183,8; 186,1], con margen |
 | Custodias perdidas | 0 | 0 | 0 |
 
-Todos los valores conocidos (fórmula del Laboratorio 3 y vaciado de fluido) caen dentro de los intervalos. En e4, la sensibilidad a la capacidad de CAR por instancia da violada hasta 30 ev/s, inconclusa en 32,1 ev/s (229,8 s [228,2; 231,4]) y satisfecha desde 35 ev/s.
+La simulación es determinista: con las mismas semillas da las mismas cifras en cada corrida (antes, `_stations` recorría un `set` de componentes y el orden de las estaciones, y con él las cifras de recuperación, cambiaba entre procesos).
+
+Valores conocidos. Disponibilidad: la fórmula del Laboratorio 3 cae dentro de los tres intervalos. Recuperación: el vaciado exacto de una cola M/M/1 que empieza con n trabajos es n / (μ − λ), y la medida agrega la espera hasta la primera llegada nueva, 1/λ (0,67 s para CAR, 0,05 s para TRS). Con eso, e1 da 7.200,1 s y e4 184,1 s, dentro de sus intervalos; e2 da 1.920,7 s, 0,8 s por debajo del suyo. El reenvío de RGW no agrega tiempo: con capacidad ilimitada en RGW la medida no cambia.
+
+En e4, la sensibilidad a la capacidad de CAR por instancia da violada hasta 32,1 ev/s (231,7 s [230,5; 233,0]), satisfecha sin margen en 35 ev/s (212,2 s [211,3; 213,0]) y con margen desde 40 ev/s.
 
 ### Tácticas de la iteración 4
 
