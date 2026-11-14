@@ -25,6 +25,7 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 | `metamodel.py` | Restricciones C1–C15 |
 | `simulation.py`, `verification.py` | Simulación y verificación (Laboratorio 5, extendido [D4]) |
 | `correspondence.py` | Correspondencia entre `sos.arch` y cada modelo de constituyente (C16) |
+| `tactics_check.py` | Justificación de las tácticas de la iteración 4: aporte de cada una a D-QS1, sensibilidad a β y alternativa descartada a T-R3 [D4] |
 | `transformations.py` | Tabla de conectores, vista C&C y análisis |
 | `generation.py` | Lee cada modelo, verifica la conformidad y aplica las transformaciones |
 | `models/` | `sos.arch` (conjunto), `ncs-e1.arch`, `ncs-e2.arch`, `ncs-e4.arch` (rediseño de la Entrega 4) |
@@ -88,6 +89,7 @@ docker run --rm -v "$PWD:/app" lssa-team-d-verif                       # models/
 docker run --rm -v "$PWD:/app" lssa-team-d-verif models/ncs-e4.arch    # un modelo
 docker run --rm -v "$PWD:/app" --entrypoint python lssa-team-d-verif \
   correspondence.py models/sos.arch models/ncs-e2.arch models/ncs-e4.arch
+docker run --rm -v "$PWD:/app" --entrypoint python lssa-team-d-verif tactics_check.py   # out/tactics/tactics.md
 ```
 
 Cada modelo deja en `out/<modelo>/` el grafo (`graph.png`) y el informe (`verification.md`). Cada corrida tarda menos de un minuto.
@@ -130,6 +132,16 @@ C6 y C7 del Laboratorio 5 ya estaban ocupadas (capas y comandos, Entrega 3), as�
 | Custodias perdidas | 0 | 0 | 0 |
 
 Todos los valores conocidos (fórmula del Laboratorio 3 y vaciado de fluido) caen dentro de los intervalos. En e4, la sensibilidad a la capacidad de CAR por instancia da violada hasta 30 ev/s, inconclusa en 32,1 ev/s (229,8 s [228,2; 231,4]) y satisfecha desde 35 ev/s.
+
+### Tácticas de la iteración 4
+
+`tactics_check.py` lee `ncs-e2.arch` y `ncs-e4.arch` y deja en `out/tactics/tactics.md` tres tablas que justifican el rediseño:
+
+| Pregunta | Resultado |
+|----------|-----------|
+| ¿Hacen falta T-R1 y T-R2 a la vez? | e2 99,549 % (violada); e2 + T-R1 99,906 % [99,900; 99,912] (inconclusa); e2 + T-R2 99,563 % (violada); e4 99,957 % (con margen). Las dos son necesarias |
+| ¿Hasta qué β aguanta e4? | Con margen hasta β = 0,08; sin margen hasta 0,10; inconclusa en 0,11–0,12; violada en 0,15. Límite analítico del margen: β ≈ 0,088 |
+| ¿Por qué lotes y no más instancias de CAR? | Con 4,5 ev/s por instancia hacen falta 15 instancias (220,0 s, sin margen); con 14, violada |
 
 ## Equipo A — Sistema de Gestión de Puertos del Caribe (CPMS)
 
