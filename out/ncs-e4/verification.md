@@ -20,33 +20,33 @@ Run 17000 s, warm-up 0 s, 10 replications (seeds 1–10); varied: CAR
 
 | Value | Measure | Estimate | 95 % CI | Threshold | Outcome |
 |-------|---------|----------|---------|-----------|---------|
-| 4.5 | recovery Custody | 1917.7 | [1905.8, 1929.5] | ≤ 230 s | Violated |
-| 4.5 | recovery Positions | 61.6 | [61.1, 62.1] | ≤ 230 s | Satisfied with margin |
-| 4.5 | recovery | 1917.7 | [1905.8, 1929.5] | ≤ 230 s | Violated |
+| 4.5 | recovery Custody | 1932.8 | [1921.5, 1944.1] | ≤ 230 s | Violated |
+| 4.5 | recovery Positions | 61.3 | [60.6, 61.9] | ≤ 230 s | Satisfied with margin |
+| 4.5 | recovery | 1932.8 | [1921.5, 1944.1] | ≤ 230 s | Violated |
 | 4.5 | lost Custody | 0.0 | [0.0, 0.0] | ≤ 0 events | Satisfied with margin |
-| 20 | recovery Custody | 374.1 | [371.1, 377.2] | ≤ 230 s | Violated |
-| 20 | recovery Positions | 61.6 | [61.1, 62.1] | ≤ 230 s | Satisfied with margin |
-| 20 | recovery | 374.1 | [371.1, 377.2] | ≤ 230 s | Violated |
+| 20 | recovery Custody | 377.3 | [375.4, 379.3] | ≤ 230 s | Violated |
+| 20 | recovery Positions | 61.3 | [60.6, 61.9] | ≤ 230 s | Satisfied with margin |
+| 20 | recovery | 377.3 | [375.4, 379.3] | ≤ 230 s | Violated |
 | 20 | lost Custody | 0.0 | [0.0, 0.0] | ≤ 0 events | Satisfied with margin |
-| 30 | recovery Custody | 246.0 | [244.2, 247.9] | ≤ 230 s | Violated |
-| 30 | recovery Positions | 61.6 | [61.1, 62.1] | ≤ 230 s | Satisfied with margin |
-| 30 | recovery | 246.0 | [244.2, 247.9] | ≤ 230 s | Violated |
+| 30 | recovery Custody | 248.4 | [247.3, 249.5] | ≤ 230 s | Violated |
+| 30 | recovery Positions | 61.3 | [60.6, 61.9] | ≤ 230 s | Satisfied with margin |
+| 30 | recovery | 248.4 | [247.3, 249.5] | ≤ 230 s | Violated |
 | 30 | lost Custody | 0.0 | [0.0, 0.0] | ≤ 0 events | Satisfied with margin |
-| 32.1 | recovery Custody | 229.8 | [228.2, 231.4] | ≤ 230 s | Inconclusive |
-| 32.1 | recovery Positions | 61.6 | [61.1, 62.1] | ≤ 230 s | Satisfied with margin |
-| 32.1 | recovery | 229.8 | [228.2, 231.4] | ≤ 230 s | Inconclusive |
+| 32.1 | recovery Custody | 231.7 | [230.5, 233.0] | ≤ 230 s | Violated |
+| 32.1 | recovery Positions | 61.3 | [60.6, 61.9] | ≤ 230 s | Satisfied with margin |
+| 32.1 | recovery | 231.7 | [230.5, 233.0] | ≤ 230 s | Violated |
 | 32.1 | lost Custody | 0.0 | [0.0, 0.0] | ≤ 0 events | Satisfied with margin |
-| 35 | recovery Custody | 210.3 | [208.6, 211.9] | ≤ 230 s | Satisfied without margin |
-| 35 | recovery Positions | 61.6 | [61.1, 62.1] | ≤ 230 s | Satisfied with margin |
-| 35 | recovery | 210.3 | [208.6, 211.9] | ≤ 230 s | Satisfied without margin |
+| 35 | recovery Custody | 212.2 | [211.3, 213.0] | ≤ 230 s | Satisfied without margin |
+| 35 | recovery Positions | 61.3 | [60.6, 61.9] | ≤ 230 s | Satisfied with margin |
+| 35 | recovery | 212.2 | [211.3, 213.0] | ≤ 230 s | Satisfied without margin |
 | 35 | lost Custody | 0.0 | [0.0, 0.0] | ≤ 0 events | Satisfied with margin |
-| 40 | recovery Custody | 183.9 | [182.2, 185.5] | ≤ 230 s | Satisfied with margin |
-| 40 | recovery Positions | 61.6 | [61.1, 62.1] | ≤ 230 s | Satisfied with margin |
-| 40 | recovery | 183.9 | [182.2, 185.5] | ≤ 230 s | Satisfied with margin |
+| 40 | recovery Custody | 184.9 | [183.8, 186.1] | ≤ 230 s | Satisfied with margin |
+| 40 | recovery Positions | 61.3 | [60.6, 61.9] | ≤ 230 s | Satisfied with margin |
+| 40 | recovery | 184.9 | [183.8, 186.1] | ≤ 230 s | Satisfied with margin |
 | 40 | lost Custody | 0.0 | [0.0, 0.0] | ≤ 0 events | Satisfied with margin |
-| 60 | recovery Custody | 121.8 | [120.8, 122.9] | ≤ 230 s | Satisfied with margin |
-| 60 | recovery Positions | 61.6 | [61.1, 62.1] | ≤ 230 s | Satisfied with margin |
-| 60 | recovery | 121.8 | [120.8, 122.9] | ≤ 230 s | Satisfied with margin |
+| 60 | recovery Custody | 122.8 | [122.0, 123.5] | ≤ 230 s | Satisfied with margin |
+| 60 | recovery Positions | 61.3 | [60.6, 61.9] | ≤ 230 s | Satisfied with margin |
+| 60 | recovery | 122.8 | [122.0, 123.5] | ≤ 230 s | Satisfied with margin |
 | 60 | lost Custody | 0.0 | [0.0, 0.0] | ≤ 0 events | Satisfied with margin |
 
 ## Scenarios not verifiable with this language

@@ -25,6 +25,7 @@ Sin argumentos se procesan todos los modelos de `models/`. Los artefactos quedan
 | `metamodel.py` | Restricciones C1–C15 |
 | `simulation.py`, `verification.py` | Simulación y verificación (Laboratorio 5, extendido [D4]) |
 | `correspondence.py` | Correspondencia entre `sos.arch` y cada modelo de constituyente (C16) |
+| `tactics_check.py` | Justificación de las tácticas de la iteración 4: aporte de cada una a D-QS1, sensibilidad a β y alternativa descartada a T-R3 [D4] |
 | `transformations.py` | Tabla de conectores, vista C&C y análisis |
 | `generation.py` | Lee cada modelo, verifica la conformidad y aplica las transformaciones |
 | `models/` | `sos.arch` (conjunto), `ncs-e1.arch`, `ncs-e2.arch`, `ncs-e4.arch` (rediseño de la Entrega 4) |
@@ -88,6 +89,7 @@ docker run --rm -v "$PWD:/app" lssa-team-d-verif                       # models/
 docker run --rm -v "$PWD:/app" lssa-team-d-verif models/ncs-e4.arch    # un modelo
 docker run --rm -v "$PWD:/app" --entrypoint python lssa-team-d-verif \
   correspondence.py models/sos.arch models/ncs-e2.arch models/ncs-e4.arch
+docker run --rm -v "$PWD:/app" --entrypoint python lssa-team-d-verif tactics_check.py   # out/tactics/tactics.md
 ```
 
 Cada modelo deja en `out/<modelo>/` el grafo (`graph.png`) y el informe (`verification.md`). Cada corrida tarda menos de un minuto.
@@ -126,10 +128,24 @@ C6 y C7 del Laboratorio 5 ya estaban ocupadas (capas y comandos, Entrega 3), as�
 |-----------|----|----|---------------|
 | S1 en el artefacto de D-QS1 | Violada: 7 elementos únicos | Violada: BEN, BTR, BAD, BRI | Satisfecha |
 | D-QS1, Monte Carlo (40 × 20 años) | 99,305 % [99,285; 99,325], violada | 99,549 % [99,536; 99,563] con balanceadores, violada | 99,957 % [99,953; 99,961], con margen |
-| D-QS10, recuperación (10 réplicas) | 7.213 s (TRS), violada | 1.917,7 s (CAR) [1.905,8; 1.929,5], violada | 183,9 s [182,2; 185,5], con margen |
+| D-QS10, recuperación (10 réplicas, semillas 1–10) | 7.211,2 s (TRS) [7.194,8; 7.227,6], violada | 1.932,8 s (CAR) [1.921,5; 1.944,1], violada | 184,9 s [183,8; 186,1], con margen |
 | Custodias perdidas | 0 | 0 | 0 |
 
-Todos los valores conocidos (fórmula del Laboratorio 3 y vaciado de fluido) caen dentro de los intervalos. En e4, la sensibilidad a la capacidad de CAR por instancia da violada hasta 30 ev/s, inconclusa en 32,1 ev/s (229,8 s [228,2; 231,4]) y satisfecha desde 35 ev/s.
+La simulación es determinista: con las mismas semillas da las mismas cifras en cada corrida (antes, `_stations` recorría un `set` de componentes y el orden de las estaciones, y con él las cifras de recuperación, cambiaba entre procesos).
+
+Valores conocidos. Disponibilidad: la fórmula del Laboratorio 3 cae dentro de los tres intervalos. Recuperación: el vaciado exacto de una cola M/M/1 que empieza con n trabajos es n / (μ − λ), y la medida agrega la espera hasta la primera llegada nueva, 1/λ (0,67 s para CAR, 0,05 s para TRS). Con eso, e1 da 7.200,1 s y e4 184,1 s, dentro de sus intervalos; e2 da 1.920,7 s, 0,8 s por debajo del suyo. El reenvío de RGW no agrega tiempo: con capacidad ilimitada en RGW la medida no cambia.
+
+En e4, la sensibilidad a la capacidad de CAR por instancia da violada hasta 32,1 ev/s (231,7 s [230,5; 233,0]), satisfecha sin margen en 35 ev/s (212,2 s [211,3; 213,0]) y con margen desde 40 ev/s.
+
+### Tácticas de la iteración 4
+
+`tactics_check.py` lee `ncs-e2.arch` y `ncs-e4.arch` y deja en `out/tactics/tactics.md` tres tablas que justifican el rediseño:
+
+| Pregunta | Resultado |
+|----------|-----------|
+| ¿Hacen falta T-R1 y T-R2 a la vez? | e2 99,549 % (violada); e2 + T-R1 99,906 % [99,900; 99,912] (inconclusa); e2 + T-R2 99,563 % (violada); e4 99,957 % (con margen). Las dos son necesarias |
+| ¿Hasta qué β aguanta e4? | Con margen hasta β = 0,08; sin margen hasta 0,10; inconclusa en 0,11–0,12; violada en 0,15. Límite analítico del margen: β ≈ 0,088 |
+| ¿Por qué lotes y no más instancias de CAR? | Con 4,5 ev/s por instancia hacen falta 15 instancias (220,0 s, sin margen); con 14, violada |
 
 ## Equipo A — Sistema de Gestión de Puertos del Caribe (CPMS)
 
