@@ -89,63 +89,76 @@ def chain():
 
 
 def availability():
-    """Figure 2: downtime per year of each structure against the 99.9 % threshold."""
-    data = [  # label, A %, low, high
-        ('e1 · diseño inicial', 99.305, 99.285, 99.325),
-        ('e2 · cálculo a mano\n(sin balanceadores)', 99.948, 99.943, 99.952),
-        ('e2 · con sus balanceadores', 99.549, 99.536, 99.563),
-        ('e2 + T-R1', 99.906, 99.900, 99.912),
-        ('e2 + T-R2', 99.563, 99.549, 99.577),
-        ('e4 · T-R1 + T-R2', 99.957, 99.953, 99.961),
-    ]
+    """Figure: downtime per year of each structure against the 99.9 % threshold, in two panels:
+    (a) before the redesign, (b) contribution of each tactic of iteration 4."""
     hours = lambda a: (100 - a) / 100 * 8760
-    fig, ax = plt.subplots(figsize=(6.4, 2.9))
-    ys = range(len(data))[::-1]
-    for y, (label, a, lo, hi) in zip(ys, data):
-        v = hours(a)
-        if 'mano' in label:
-            color = '#b9b8b3'          # not a real result: ignores the balancers
-        elif lo >= 99.92:
-            color = GOOD
-        elif hi >= 99.9:
-            color = ORANGE             # inconclusive or without margin
-        else:
-            color = BAD
-        ax.barh(y, v, height=0.55, color=color, zorder=2)
-        ax.errorbar(v, y, xerr=[[v - hours(hi)], [hours(lo) - v]], fmt='none', ecolor=INK, elinewidth=0.8, capsize=2, zorder=3)
-        ax.text(max(hours(lo) + 0.8, 10.0), y, f'{es(v)} h  ({es(a, 3)} %)', va='center', fontsize=8, color=INK)
-    ax.set_yticks(list(ys))
-    ax.set_yticklabels([d[0] for d in data])
-    ax.axvline(hours(99.9), color=INK, lw=0.9, ls='-', zorder=4, label='umbral 99,9 % (8,8 h/año)')
-    ax.axvline(hours(99.92), color=INK2, lw=0.8, ls=':', zorder=4, label='con margen 99,92 % (7,0 h/año)')
-    ax.legend(loc='lower right', frameon=False, fontsize=8)
-    ax.set_xlabel('Horas al año con la cadena de levante caída (menos es mejor)')
-    ax.set_xlim(0, 72)
-    ax.grid(axis='x', color=GRID, lw=0.5, zorder=0)
-    ax.tick_params(axis='y', length=0)
+    panels = [
+        ('(a) Antes del rediseño: la redundancia de e2 no alcanza por los balanceadores', [
+            ('e1 · diseño inicial, sin copias', 99.305, 99.285, 99.325),
+            ('e2 · cálculo a mano\n(ignora los balanceadores)', 99.948, 99.943, 99.952),
+            ('e2 · con sus balanceadores', 99.549, 99.536, 99.563)]),
+        ('(b) Rediseño: cada táctica por separado y las dos juntas', [
+            ('e2 (punto de partida)', 99.549, 99.536, 99.563),
+            ('e2 + T-R1\n(balanceadores en pareja)', 99.906, 99.900, 99.912),
+            ('e2 + T-R2\n(dos zonas, β = 0,05)', 99.563, 99.549, 99.577),
+            ('e4 = T-R1 + T-R2', 99.957, 99.953, 99.961)]),
+    ]
+    fig, axes = plt.subplots(2, 1, figsize=(6.4, 5.0), gridspec_kw={'height_ratios': [3, 4], 'hspace': 0.55})
+    for ax, (title, data) in zip(axes, panels):
+        ys = range(len(data))[::-1]
+        for y, (label, a, lo, hi) in zip(ys, data):
+            v = hours(a)
+            if 'mano' in label:
+                color = '#b9b8b3'
+            elif lo >= 99.92:
+                color = GOOD
+            elif hi >= 99.9:
+                color = ORANGE
+            else:
+                color = BAD
+            ax.barh(y, v, height=0.55, color=color, zorder=2)
+            ax.errorbar(v, y, xerr=[[v - hours(hi)], [hours(lo) - v]], fmt='none', ecolor=INK, elinewidth=0.8,
+                        capsize=2, zorder=3)
+            ax.text(max(hours(lo) + 0.8, 10.0), y, f'{es(v)} h al año  ({es(a, 3)} %)', va='center', fontsize=8, color=INK)
+        ax.set_yticks(list(ys))
+        ax.set_yticklabels([d[0] for d in data], fontsize=8)
+        ax.axvline(hours(99.9), color=INK, lw=0.9, zorder=4, label='meta 99,9 % (8,8 h/año)')
+        ax.axvline(hours(99.92), color=INK2, lw=0.8, ls=':', zorder=4, label='con margen 99,92 % (7,0 h/año)')
+        ax.set_xlim(0, 72)
+        ax.grid(axis='x', color=GRID, lw=0.5, zorder=0)
+        ax.tick_params(axis='y', length=0)
+        ax.set_title(title, fontsize=9, loc='left', color=INK, fontweight='bold')
+    axes[1].set_xlabel('Horas al año con la cadena de levante caída (menos es mejor)')
+    axes[1].legend(loc='upper center', bbox_to_anchor=(0.45, -0.3), ncol=2, frameon=False, fontsize=7.5)
     save(fig, 'f2-disponibilidad.png')
 
 
 def backlog():
-    """Figure 3: how the custody backlog drains in e2 and e4 (fluid view, 14 400 events)."""
-    fig, ax = plt.subplots(figsize=(6.4, 2.6))
+    """Figure: how the custody backlog (14 400 events) drains in CAR, one panel per design."""
     n = 14400
-    for label, free, color in [('e2: 2 × 4,5 ev/s − 1,5 de carga = 7,5 ev/s libres', 7.5, BAD),
-                               ('e4: 2 × 40 ev/s − 1,5 de carga = 78,5 ev/s libres', 78.5, BLUE)]:
+    fig, axes = plt.subplots(1, 2, figsize=(6.4, 2.7), sharey=True, gridspec_kw={'wspace': 0.12})
+    for ax, (title, free, color, xmax, step) in zip(axes, [
+            ('(a) Diseño anterior (e2)\n2 × 4,5 − 1,5 = 7,5 ev/s libres', 7.5, BAD, 2100, 500),
+            ('(b) Rediseño (e4)\n2 × 40 − 1,5 = 78,5 ev/s libres', 78.5, BLUE, 260, 50)]):
         t = n / free
-        ax.plot([0, t], [n, 0], color=color, lw=2, solid_capstyle='round', label=label)
+        ax.plot([0, t], [n, 0], color=color, lw=2.2, solid_capstyle='round')
         ax.plot([t], [0], 'o', color=color, ms=5, zorder=3)
-        ax.text(t - 35 if free > 10 else t, 600 if free > 10 else 900, f'≈ {es(t, 0)} s', ha='right' if free > 10 else 'center', fontsize=8, color=INK)
-    ax.axvline(230, color=INK, lw=0.9)
-    ax.text(245, 7500, 'meta: 230 s', fontsize=8, color=INK)
-    ax.set_xlim(0, 2050)
-    ax.set_ylim(0, 15500)
-    ax.set_xlabel('Segundos desde que Carretera vuelve')
-    ax.set_ylabel('Custodias pendientes en CAR')
-    ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: es(v, 0)))
-    ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: es(v, 0)))
-    ax.grid(color=GRID, lw=0.5, zorder=0)
-    ax.legend(frameon=False, fontsize=8, loc='upper right')
+        ax.axvline(230, color=INK, lw=0.9)
+        if free < 10:
+            ax.text(230 + xmax * 0.015, 5200, 'meta\n230 s', fontsize=7.5, color=INK, va='top')
+        else:
+            ax.text(230 + xmax * 0.015, 13300, 'meta\n230 s', fontsize=7.5, color=INK, va='top')
+        ax.annotate(f'termina en {es(t, 0)} s', (t, 0), xytext=(t * 0.76, 1500), ha='right', va='center',
+                    fontsize=7.5, color=INK, arrowprops=dict(arrowstyle='-', color=MUTED, lw=0.6))
+        ax.set_xlim(0, xmax)
+        ax.set_xticks(range(0, xmax + 1, step))
+        ax.set_ylim(0, 15500)
+        ax.set_title(title, fontsize=8.5, loc='left', color=INK)
+        ax.set_xlabel('Segundos desde que vuelve Carretera')
+        ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: es(v, 0)))
+        ax.grid(color=GRID, lw=0.5, zorder=0)
+    axes[0].set_ylabel('Custodias pendientes en CAR')
+    axes[0].yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: es(v, 0)))
     save(fig, 'f3-rezago.png')
 
 
@@ -205,17 +218,17 @@ def capacity():
 
 
 def beta():
-    """Figure 6: P1 against the common-cause fraction beta (e4 structure)."""
-    xs = [0.0, 0.02, 0.05, 0.08, 0.09, 0.10, 0.11, 0.12, 0.15]
-    m = [99.999, 99.982, 99.955, 99.928, 99.914, 99.908, 99.901, 99.893, 99.863]
-    lo = [99.999, 99.980, 99.950, 99.923, 99.908, 99.901, 99.893, 99.886, 99.857]
-    hi = [100.0, 99.985, 99.960, 99.933, 99.920, 99.915, 99.908, 99.900, 99.870]
+    """Figure: P1 against the common-cause fraction beta (e4 structure, seed 1000 for every point)."""
+    xs = [0.0, 0.05, 0.08, 0.10, 0.11, 0.12, 0.15, 0.20]
+    m = [99.999, 99.957, 99.927, 99.906, 99.897, 99.887, 99.862, 99.826]
+    lo = [99.998, 99.953, 99.922, 99.900, 99.889, 99.880, 99.853, 99.815]
+    hi = [100.0, 99.961, 99.932, 99.912, 99.904, 99.893, 99.871, 99.836]
     fig, ax = plt.subplots(figsize=(6.4, 2.6))
     sweep(ax, xs, m, lo, hi, BLUE)
     ax.axhline(99.9, color=INK, lw=0.9)
     ax.axhline(99.92, color=INK2, lw=0.7, ls=':')
-    ax.text(0.152, 99.903, 'umbral 99,9 %', ha='right', fontsize=8, color=INK)
-    ax.text(0.152, 99.923, 'con margen ≥ 99,92 %', ha='right', fontsize=8, color=INK2)
+    ax.text(0.205, 99.903, 'meta 99,9 %', ha='right', fontsize=8, color=INK)
+    ax.text(0.205, 99.923, 'con margen ≥ 99,92 %', ha='right', fontsize=8, color=INK2)
     ax.axvline(0.05, color=BLUE, lw=0.7, ls='--')
     ax.text(0.052, 99.99, 'rediseño\nβ = 0,05', fontsize=8, color=INK, va='top')
     ax.axvline(0.10, color=MUTED, lw=0.7, ls='--')
@@ -224,9 +237,10 @@ def beta():
     ax.set_ylabel('Disponibilidad (%)')
     ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: es(v, 2)))
     ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: es(v, 2)))
-    ax.set_xlim(-0.003, 0.155)
-    ax.set_ylim(99.85, 100.005)
-    ax.set_yticks([99.86, 99.88, 99.90, 99.92, 99.94, 99.96, 99.98, 100.0])
+    ax.set_xlim(-0.004, 0.207)
+    ax.set_ylim(99.81, 100.005)
+    ax.set_xticks([0, 0.05, 0.10, 0.15, 0.20])
+    ax.set_yticks([99.82, 99.86, 99.90, 99.94, 99.98])
     ax.grid(color=GRID, lw=0.5, zorder=0)
     save(fig, 'f6-beta.png')
 
