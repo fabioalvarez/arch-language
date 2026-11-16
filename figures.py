@@ -232,62 +232,106 @@ def beta():
 
 
 def sos():
-    """Figure: the joint model (sos.arch), its 57 global connectors grouped by pair of constituents."""
-    import collections
+    """Figure 1: what the joint model (sos.arch) says each system exchanges.
+    (a) the 29 global connectors of the NCS, by kind of information and direction;
+    (b) the 28 connectors among the other five systems, by purpose."""
     import re
-    src = open('out/sos/view.mmd').read()
-    edges = re.findall(r'(\w+) -->\|\w+\| (\w+)', src)
-    pairs = collections.Counter(tuple(sorted(e)) for e in edges)
-    pos = {'RGW': (0, 0), 'NCG': (4.2, 0), 'FGW': (2.1, 1.65), 'CGW': (2.1, 0.55),
-           'LGW': (2.1, -0.55), 'PGW': (2.1, -1.65)}
-    names = {'RGW': 'Carretera (RTS)\nRGW', 'NCG': 'Coordinación\nNacional (NCS)\nNCG',
-             'FGW': 'Fluvial (FTS) · FGW', 'CGW': 'Puertos Caribe (CPS) · CGW',
-             'LGW': 'Férreo (RLS) · LGW', 'PGW': 'Puertos Pacífico (PPS) · PGW'}
-    fig, ax = plt.subplots(figsize=(6.4, 3.9))
-    ax.axis('off')
-    ax.set_xlim(-0.9, 5.1)
-    ax.set_ylim(-2.75, 2.5)
-    for (a, b), n in sorted(pairs.items(), key=lambda kv: 'NCG' in kv[0]):
-        (x1, y1), (x2, y2) = pos[a], pos[b]
-        color = BLUE if 'NCG' in (a, b) else '#b9b8b3'
-        lw = 0.6 + 0.45 * n
-        if {a, b} == {'NCG', 'RGW'}:     # arc over the top, so it does not cross the middle column
-            import numpy as np
-            t = np.linspace(0, 1, 60)
-            cx, cy = 2.1, 4.3              # control point: the curve peaks at y = 2.15, above the top box
-            bx = (1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2
-            by = (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2
-            ax.plot(bx, by, color=color, lw=lw, zorder=1, solid_capstyle='round')
-            mx, my = 2.1, 2.15
-        else:
-            ax.plot([x1, x2], [y1, y2], color=color, lw=lw, zorder=1, solid_capstyle='round')
-            if 'NCG' in (a, b):
-                o = pos[b] if a == 'NCG' else pos[a]
-                mx, my = o[0] + 0.62 * (pos['NCG'][0] - o[0]), o[1] + 0.62 * (pos['NCG'][1] - o[1])
-            elif 'RGW' in (a, b):
-                o = pos[b] if a == 'RGW' else pos[a]
-                mx, my = 0.38 * o[0], 0.38 * o[1]
-            else:
-                mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-        ax.text(mx, my, str(n), ha='center', va='center', fontsize=7.5, color=INK, zorder=4,
-                bbox=dict(boxstyle='circle,pad=0.18', fc='white', ec=color, lw=0.8))
-    for k, (x, y) in pos.items():
-        hub = k in ('NCG', 'RGW')
-        fc = '#e3eefb' if k == 'NCG' else ('#f2f1ee' if hub else 'white')
-        ec = BLUE if k == 'NCG' else MUTED
-        w = 1.25 if hub else 1.9
-        h = 0.75 if hub else 0.42
-        if k == 'NCG':
-            h = 0.95
-        ax.add_patch(FancyBboxPatch((x - w / 2, y - h / 2), w, h, boxstyle='round,pad=0,rounding_size=0.08',
-                                    fc=fc, ec=ec, lw=1.0, zorder=3))
-        ax.text(x, y, names[k], ha='center', va='center', fontsize=7.5, color=INK, zorder=4,
-                fontweight='bold' if k == 'NCG' else 'normal')
-    ax.text(-0.85, -2.7, 'Cada caja es un sistema con su componente de frontera (T2). El número es cuántos conectores '
-            'globales los unen\n(en ambos sentidos); en azul, los del NCS. Total: 57 conectores, 14 acuerdos.',
-            fontsize=7.5, color=INK2, va='bottom')
-    save(fig, 'f0-sos.png')
+    src = open('out/sos/connectors.md').read()
+    ids = set(re.findall(r'\| (SoS_K\d+[ab]?) \|', src))
+    assert len(ids) == 57, len(ids)
+    rows = [('Carretera', 'RTS · RGW'), ('Puertos Caribe', 'CPS · CGW'), ('Puertos Pacífico', 'PPS · PGW'),
+            ('Férreo', 'RLS · LGW'), ('Fluvial', 'FTS · FGW')]
+    cols = [('Custodia\nrecibida', 'in'), ('Posición y\nestado del viaje', 'in'), ('Arribo y\nmanifiesto', 'in'),
+            ('Levante\naduanero', 'both'), ('Estado de\nla carga', 'both'), ('Estado de\nservicio', 'out'),
+            ('Paso por\npeaje', 'in')]
+    cell = {  # (row, col): connector ids of sos.arch
+        (0, 0): 'K5', (0, 1): 'K6', (0, 4): 'K17', (0, 6): 'K36',
+        (1, 0): 'K29', (1, 2): 'K11', (1, 3): 'K12, K32', (1, 4): 'K21', (1, 5): 'K32',
+        (2, 0): 'K30', (2, 2): 'K8', (2, 3): 'K9, K33', (2, 4): 'K20', (2, 5): 'K33',
+        (3, 0): 'K13', (3, 1): 'K14', (3, 4): 'K18', (3, 5): 'K34',
+        (4, 0): 'K15', (4, 1): 'K16', (4, 4): 'K19', (4, 5): 'K35'}
+    qs1 = {(0, 0), (0, 1), (1, 5), (2, 5), (3, 5), (4, 5), (0, 6)}   # used by SoS-QS1
+    face = {'in': '#e3eefb', 'out': '#fde9df', 'both': '#e7f6ef'}
+    edge = {'in': BLUE, 'out': ORANGE, 'both': AQUA}
+    arrow = {'in': '→ NCS', 'out': 'NCS →', 'both': '⇄ NCS'}
 
+    fig = plt.figure(figsize=(6.6, 6.9))
+    ax = fig.add_axes([0, 0.5, 1, 0.5])
+    ax.axis('off')
+    ax.set_xlim(0, 10)
+    ax.set_ylim(-0.45, 6.3)
+    ax.text(0.05, 6.15, '(a) Los 29 conectores del NCS: qué recibe y qué entrega a cada sistema', fontsize=9,
+            fontweight='bold', color=INK, va='top')
+    x0, cw, rh = 2.1, 1.12, 0.78
+    for j, (name, d) in enumerate(cols):
+        cx = x0 + j * cw + cw / 2
+        ax.text(cx, 5.45, name, ha='center', va='center', fontsize=7.2, color=INK)
+        ax.text(cx, 4.95, arrow[d], ha='center', va='center', fontsize=7, color=edge[d], fontweight='bold')
+    for i, (name, gw) in enumerate(rows):
+        cy = 4.3 - i * rh
+        ax.text(0.05, cy + 0.1, name, va='center', fontsize=8, color=INK, fontweight='bold')
+        ax.text(0.05, cy - 0.18, gw, va='center', fontsize=7, color=INK2)
+        for j, (_, d) in enumerate(cols):
+            x = x0 + j * cw
+            v = cell.get((i, j))
+            if v is None:
+                ax.add_patch(FancyBboxPatch((x + 0.05, cy - rh / 2 + 0.06), cw - 0.1, rh - 0.12,
+                                            boxstyle='round,pad=0,rounding_size=0.05', fc='#f7f7f5', ec='#e4e3df', lw=0.6))
+                continue
+            hot = (i, j) in qs1
+            ax.add_patch(FancyBboxPatch((x + 0.05, cy - rh / 2 + 0.06), cw - 0.1, rh - 0.12,
+                                        boxstyle='round,pad=0,rounding_size=0.05', fc=face[d], ec=INK if hot else edge[d],
+                                        lw=1.8 if hot else 0.8))
+            ax.text(x + cw / 2, cy, v, ha='center', va='center', fontsize=7.5, color=INK)
+    ly = 0.25
+    for k, (lab, d) in enumerate([('el sistema informa al NCS', 'in'), ('el NCS informa al sistema', 'out'),
+                                  ('pregunta y respuesta', 'both')]):
+        x = 0.1 + k * 2.75
+        ax.add_patch(FancyBboxPatch((x, ly - 0.13), 0.35, 0.26, boxstyle='round,pad=0,rounding_size=0.04',
+                                    fc=face[d], ec=edge[d], lw=0.8))
+        ax.text(x + 0.45, ly, lab, va='center', fontsize=7.5, color=INK2)
+    ax.add_patch(FancyBboxPatch((8.35, ly - 0.13), 0.35, 0.26, boxstyle='round,pad=0,rounding_size=0.04',
+                                fc='white', ec=INK, lw=1.8))
+    ax.text(8.8, ly, 'usado en SoS-QS1', va='center', fontsize=7.5, color=INK2)
+    ax.text(0.05, -0.25, 'Kn = conector SoS-Kn del modelo conjunto; «K9» incluye la pregunta (K9a) y la respuesta (K9b).',
+            fontsize=7, color=INK2)
+
+    bx = fig.add_axes([0, 0, 1, 0.47])
+    bx.axis('off')
+    bx.set_xlim(0, 10)
+    bx.set_ylim(-0.2, 5.4)
+    bx.text(0.05, 5.3, '(b) Los 28 conectores entre los otros cinco sistemas: coordinan la operación', fontsize=9,
+            fontweight='bold', color=INK, va='top')
+    pos = {'RTS': (0.85, 2.35), 'FTS': (7.0, 4.3), 'CPS': (7.0, 3.0), 'RLS': (7.0, 1.7), 'PPS': (7.0, 0.4)}
+    label = {'RTS': 'Carretera\n(RTS)', 'FTS': 'Fluvial (FTS)', 'CPS': 'Puertos Caribe (CPS)', 'RLS': 'Férreo (RLS)',
+             'PPS': 'Puertos Pacífico (PPS)'}
+    links = [('FTS', 'turno camión-barcaza y retiro de carga (K4, K28)', 0.2),
+             ('CPS', 'cita portuaria y retiro de carga (K1, K26)', 0.2),
+             ('RLS', 'turno camión-tren y retiro de carga (K3, K23)', -0.2),
+             ('PPS', 'cita portuaria y retiro de carga (K2, K27)', -0.2)]
+    trunk = 2.0                        # Carretera reaches the four systems through one trunk line
+    (x1, y1) = pos['RTS']
+    bx.plot([x1 + 0.75, trunk], [y1, y1], color='#b9b8b3', lw=1.6, zorder=1)
+    bx.plot([trunk, trunk], [pos['PPS'][1], pos['FTS'][1]], color='#b9b8b3', lw=1.6, zorder=1)
+    for b, text, dy in links:
+        x2, y2 = pos[b]
+        bx.plot([trunk, x2 - 0.95], [y2, y2], color='#b9b8b3', lw=1.6, zorder=1)
+        bx.text(trunk + 0.15, y2 + 0.2, text, ha='left', va='center', fontsize=7, color=INK, zorder=3)
+    side = [('FTS', 'CPS', 'muelle de transferencia y\ncargue de barcazas (K10, K31)'),
+            ('CPS', 'RLS', 'vagones y descargue de\nconvoyes (K24, K25)'),
+            ('RLS', 'PPS', 'vagones y descargue de\nconvoyes (K7, K22)')]
+    for a, b, text in side:
+        (x1, y1), (x2, y2) = pos[a], pos[b]
+        bx.plot([x1 + 1.05, x2 + 1.05], [y1, y2], color='#b9b8b3', lw=1.6, zorder=1)
+        bx.plot([x1 + 0.95, x1 + 1.05], [y1, y1], color='#b9b8b3', lw=1.6)
+        bx.plot([x2 + 0.95, x2 + 1.05], [y2, y2], color='#b9b8b3', lw=1.6)
+        bx.text(x1 + 1.15, (y1 + y2) / 2, text, ha='left', va='center', fontsize=7, color=INK)
+    for k, (x, y) in pos.items():
+        w, h = (1.5, 0.75) if k == 'RTS' else (1.9, 0.42)
+        bx.add_patch(FancyBboxPatch((x - w / 2, y - h / 2), w, h, boxstyle='round,pad=0,rounding_size=0.06',
+                                    fc='#f2f1ee' if k == 'RTS' else 'white', ec=MUTED, lw=1.0, zorder=2))
+        bx.text(x, y, label[k], ha='center', va='center', fontsize=7.5, color=INK, zorder=3)
+    save(fig, 'f0-sos.png')
 
 if __name__ == '__main__':
     sos(); chain(); availability(); backlog(); m4(); capacity(); beta()
