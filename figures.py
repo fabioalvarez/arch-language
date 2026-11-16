@@ -47,7 +47,7 @@ def chain():
                            ('BAD', 2, True), ('ADU', 2, False), ('BRI', 2, True), ('RSK', 2, False),
                            ('EXDB', 2, False)], 'β = 0,05 · dos zonas'),
     ]
-    fig, ax = plt.subplots(figsize=(7.0, 2.9))
+    fig, ax = plt.subplots(figsize=(6.4, 2.9))
     ax.set_xlim(-0.2, 10.4)
     ax.set_ylim(-1.05, 3.2)
     ax.axis('off')
@@ -99,7 +99,7 @@ def availability():
         ('e4 · T-R1 + T-R2', 99.957, 99.953, 99.961),
     ]
     hours = lambda a: (100 - a) / 100 * 8760
-    fig, ax = plt.subplots(figsize=(7.0, 2.9))
+    fig, ax = plt.subplots(figsize=(6.4, 2.9))
     ys = range(len(data))[::-1]
     for y, (label, a, lo, hi) in zip(ys, data):
         v = hours(a)
@@ -113,13 +113,12 @@ def availability():
             color = BAD
         ax.barh(y, v, height=0.55, color=color, zorder=2)
         ax.errorbar(v, y, xerr=[[v - hours(hi)], [hours(lo) - v]], fmt='none', ecolor=INK, elinewidth=0.8, capsize=2, zorder=3)
-        ax.text(hours(lo) + 0.8, y, f'{es(v)} h  ({es(a, 3)} %)', va='center', fontsize=8, color=INK)
+        ax.text(max(hours(lo) + 0.8, 10.0), y, f'{es(v)} h  ({es(a, 3)} %)', va='center', fontsize=8, color=INK)
     ax.set_yticks(list(ys))
     ax.set_yticklabels([d[0] for d in data])
-    ax.axvline(hours(99.9), color=INK, lw=0.9, ls='-', zorder=4)
-    ax.text(hours(99.9) + 0.4, len(data) - 0.45, 'umbral 99,9 % = 8,8 h/año', fontsize=8, color=INK)
-    ax.axvline(hours(99.92), color=INK2, lw=0.7, ls=':', zorder=4)
-    ax.text(hours(99.92) - 0.4, -0.75, 'con margen\n(≥ 99,92 %)', ha='right', va='bottom', fontsize=7, color=INK2)
+    ax.axvline(hours(99.9), color=INK, lw=0.9, ls='-', zorder=4, label='umbral 99,9 % (8,8 h/año)')
+    ax.axvline(hours(99.92), color=INK2, lw=0.8, ls=':', zorder=4, label='con margen 99,92 % (7,0 h/año)')
+    ax.legend(loc='lower right', frameon=False, fontsize=8)
     ax.set_xlabel('Horas al año con la cadena de levante caída (menos es mejor)')
     ax.set_xlim(0, 72)
     ax.grid(axis='x', color=GRID, lw=0.5, zorder=0)
@@ -129,16 +128,16 @@ def availability():
 
 def backlog():
     """Figure 3: how the custody backlog drains in e2 and e4 (fluid view, 14 400 events)."""
-    fig, ax = plt.subplots(figsize=(7.0, 2.6))
+    fig, ax = plt.subplots(figsize=(6.4, 2.6))
     n = 14400
     for label, free, color in [('e2: 2 × 4,5 ev/s − 1,5 de carga = 7,5 ev/s libres', 7.5, BAD),
                                ('e4: 2 × 40 ev/s − 1,5 de carga = 78,5 ev/s libres', 78.5, BLUE)]:
         t = n / free
         ax.plot([0, t], [n, 0], color=color, lw=2, solid_capstyle='round', label=label)
         ax.plot([t], [0], 'o', color=color, ms=5, zorder=3)
-        ax.text(t - 25 if free > 10 else t, 900, f'≈ {es(t, 0)} s', ha='right' if free > 10 else 'center', fontsize=8, color=INK)
+        ax.text(t - 35 if free > 10 else t, 600 if free > 10 else 900, f'≈ {es(t, 0)} s', ha='right' if free > 10 else 'center', fontsize=8, color=INK)
     ax.axvline(230, color=INK, lw=0.9)
-    ax.text(240, 13000, 'meta: 230 s', fontsize=8, color=INK)
+    ax.text(245, 7500, 'meta: 230 s', fontsize=8, color=INK)
     ax.set_xlim(0, 2050)
     ax.set_ylim(0, 15500)
     ax.set_xlabel('Segundos desde que Carretera vuelve')
@@ -153,7 +152,7 @@ def backlog():
 def m4():
     """Figure 4: SoS-QS1 (M4) = agreed budgets of the other stages + the verified NCS stage."""
     others = 200 + 40 + 10 + 300
-    fig, ax = plt.subplots(figsize=(7.0, 1.7))
+    fig, ax = plt.subplots(figsize=(6.4, 1.7))
     for y, v, color in [(1, 1932.8, BAD), (0, 184.9, BLUE)]:
         ax.barh(y, others, height=0.5, color='#b9b8b3', edgecolor='white', lw=2)
         ax.text(others / 2, y, f'otros tramos\n{es(others, 0)} s', ha='center', va='center', fontsize=7.5, color=INK)
@@ -186,15 +185,19 @@ def capacity():
     m = [377.3, 248.4, 231.7, 212.2, 184.9, 122.8]
     lo = [375.4, 247.3, 230.5, 211.3, 183.8, 122.0]
     hi = [379.3, 249.5, 233.0, 213.0, 186.1, 123.5]
-    fig, ax = plt.subplots(figsize=(7.0, 2.6))
+    fig, ax = plt.subplots(figsize=(6.4, 2.6))
     sweep(ax, xs, m, lo, hi, BLUE)
     ax.axhline(230, color=INK, lw=0.9)
     ax.axhline(207, color=INK2, lw=0.7, ls=':')
     ax.text(58, 233, 'meta 230 s', ha='right', va='bottom', fontsize=8, color=INK)
     ax.text(58, 210, 'con margen ≤ 207 s', ha='right', va='bottom', fontsize=8, color=INK2)
     for x, v in zip(xs, m):
-        ax.annotate(f'{es(v)} s', (x, v), xytext=(5, 5), textcoords='offset points', fontsize=7.5, color=INK)
-    ax.set_xlabel('Capacidad de CAR por instancia (ev/s) · rediseño: 40 · supuesto anterior: 4,5')
+        if x == 32.1:      # threshold point: callout in the empty lower-left area
+            ax.annotate(f'32,1 ev/s → {es(v)} s\n(todavía viola la meta)', (x, v), xytext=(22.5, 165),
+                        fontsize=7.5, color=INK, arrowprops=dict(arrowstyle='-', color=MUTED, lw=0.6))
+        else:
+            ax.annotate(f'{es(v)} s', (x, v), xytext=(5, 5), textcoords='offset points', fontsize=7.5, color=INK)
+    ax.set_xlabel('Capacidad de CAR por instancia (ev/s); el rediseño supone 40')
     ax.set_ylabel('Tiempo de recuperación (s)')
     ax.set_xlim(18, 62)
     ax.grid(color=GRID, lw=0.5, zorder=0)
@@ -207,7 +210,7 @@ def beta():
     m = [99.999, 99.982, 99.955, 99.928, 99.914, 99.908, 99.901, 99.893, 99.863]
     lo = [99.999, 99.980, 99.950, 99.923, 99.908, 99.901, 99.893, 99.886, 99.857]
     hi = [100.0, 99.985, 99.960, 99.933, 99.920, 99.915, 99.908, 99.900, 99.870]
-    fig, ax = plt.subplots(figsize=(7.0, 2.6))
+    fig, ax = plt.subplots(figsize=(6.4, 2.6))
     sweep(ax, xs, m, lo, hi, BLUE)
     ax.axhline(99.9, color=INK, lw=0.9)
     ax.axhline(99.92, color=INK2, lw=0.7, ls=':')
