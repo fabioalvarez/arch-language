@@ -231,6 +231,64 @@ def beta():
     save(fig, 'f6-beta.png')
 
 
+def sos():
+    """Figure: the joint model (sos.arch), its 57 global connectors grouped by pair of constituents."""
+    import collections
+    import re
+    src = open('out/sos/view.mmd').read()
+    edges = re.findall(r'(\w+) -->\|\w+\| (\w+)', src)
+    pairs = collections.Counter(tuple(sorted(e)) for e in edges)
+    pos = {'RGW': (0, 0), 'NCG': (4.2, 0), 'FGW': (2.1, 1.65), 'CGW': (2.1, 0.55),
+           'LGW': (2.1, -0.55), 'PGW': (2.1, -1.65)}
+    names = {'RGW': 'Carretera (RTS)\nRGW', 'NCG': 'Coordinación\nNacional (NCS)\nNCG',
+             'FGW': 'Fluvial (FTS) · FGW', 'CGW': 'Puertos Caribe (CPS) · CGW',
+             'LGW': 'Férreo (RLS) · LGW', 'PGW': 'Puertos Pacífico (PPS) · PGW'}
+    fig, ax = plt.subplots(figsize=(6.4, 3.9))
+    ax.axis('off')
+    ax.set_xlim(-0.9, 5.1)
+    ax.set_ylim(-2.75, 2.5)
+    for (a, b), n in sorted(pairs.items(), key=lambda kv: 'NCG' in kv[0]):
+        (x1, y1), (x2, y2) = pos[a], pos[b]
+        color = BLUE if 'NCG' in (a, b) else '#b9b8b3'
+        lw = 0.6 + 0.45 * n
+        if {a, b} == {'NCG', 'RGW'}:     # arc over the top, so it does not cross the middle column
+            import numpy as np
+            t = np.linspace(0, 1, 60)
+            cx, cy = 2.1, 4.3              # control point: the curve peaks at y = 2.15, above the top box
+            bx = (1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2
+            by = (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2
+            ax.plot(bx, by, color=color, lw=lw, zorder=1, solid_capstyle='round')
+            mx, my = 2.1, 2.15
+        else:
+            ax.plot([x1, x2], [y1, y2], color=color, lw=lw, zorder=1, solid_capstyle='round')
+            if 'NCG' in (a, b):
+                o = pos[b] if a == 'NCG' else pos[a]
+                mx, my = o[0] + 0.62 * (pos['NCG'][0] - o[0]), o[1] + 0.62 * (pos['NCG'][1] - o[1])
+            elif 'RGW' in (a, b):
+                o = pos[b] if a == 'RGW' else pos[a]
+                mx, my = 0.38 * o[0], 0.38 * o[1]
+            else:
+                mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+        ax.text(mx, my, str(n), ha='center', va='center', fontsize=7.5, color=INK, zorder=4,
+                bbox=dict(boxstyle='circle,pad=0.18', fc='white', ec=color, lw=0.8))
+    for k, (x, y) in pos.items():
+        hub = k in ('NCG', 'RGW')
+        fc = '#e3eefb' if k == 'NCG' else ('#f2f1ee' if hub else 'white')
+        ec = BLUE if k == 'NCG' else MUTED
+        w = 1.25 if hub else 1.9
+        h = 0.75 if hub else 0.42
+        if k == 'NCG':
+            h = 0.95
+        ax.add_patch(FancyBboxPatch((x - w / 2, y - h / 2), w, h, boxstyle='round,pad=0,rounding_size=0.08',
+                                    fc=fc, ec=ec, lw=1.0, zorder=3))
+        ax.text(x, y, names[k], ha='center', va='center', fontsize=7.5, color=INK, zorder=4,
+                fontweight='bold' if k == 'NCG' else 'normal')
+    ax.text(-0.85, -2.7, 'Cada caja es un sistema con su componente de frontera (T2). El número es cuántos conectores '
+            'globales los unen\n(en ambos sentidos); en azul, los del NCS. Total: 57 conectores, 14 acuerdos.',
+            fontsize=7.5, color=INK2, va='bottom')
+    save(fig, 'f0-sos.png')
+
+
 if __name__ == '__main__':
-    chain(); availability(); backlog(); m4(); capacity(); beta()
+    sos(); chain(); availability(); backlog(); m4(); capacity(); beta()
     print('\n'.join(sorted(os.listdir(OUT))))
