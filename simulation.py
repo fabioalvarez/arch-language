@@ -17,12 +17,35 @@ marked [D4]:
     an availability analysis, read from the model.
 """
 import math
+import os
 import random
 import statistics
 
 # Student t quantiles (0.975) by degrees of freedom, for 95 % confidence intervals
 T_975 = {1: 12.71, 2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57, 6: 2.45, 7: 2.36, 8: 2.31,
          9: 2.26, 10: 2.23, 15: 2.13, 20: 2.09, 30: 2.04, 40: 2.02, 60: 2.00}
+
+# [D4] Service-time distribution for FIFO servers (mean always 1/mu).
+# SERVICE_DIST=exponential|deterministic|lognormal (default exponential).
+# Lognormal uses SERVICE_DIST_SIGMA (default 0.5): mu_ln = ln(1/mu) - sigma^2/2
+# so E[X] = 1/mu.
+SERVICE_DIST = os.environ.get('SERVICE_DIST', 'exponential').lower()
+SERVICE_DIST_SIGMA = float(os.environ.get('SERVICE_DIST_SIGMA', '0.5'))
+
+
+def _service_time(rng, mu):
+    """Draw one service time with mean 1/mu under SERVICE_DIST."""
+    if SERVICE_DIST == 'exponential':
+        return rng.expovariate(mu)
+    if SERVICE_DIST == 'deterministic':
+        return 1.0 / mu
+    if SERVICE_DIST == 'lognormal':
+        # E[lognormal(m, s)] = exp(m + s^2/2) = 1/mu
+        m = math.log(1.0 / mu) - 0.5 * SERVICE_DIST_SIGMA ** 2
+        return rng.lognormvariate(m, SERVICE_DIST_SIGMA)
+    raise ValueError(
+        f"SERVICE_DIST must be exponential|deterministic|lognormal, got {SERVICE_DIST!r}"
+    )
 
 
 class Job:
@@ -72,10 +95,11 @@ def capacity_of(component):
 
 def simulate(scenario, seed, rates, capacities):
     """
-    Every component with a capacity is a FIFO server with exponential service; components
-    without capacity take no time. A component that is down loses the jobs that reach it,
-    unless the previous component of the path is a store, or [D4] it is a store itself;
-    then the jobs are held until the fault ends.
+    Every component with a capacity is a FIFO server whose service times follow
+    SERVICE_DIST (exponential by default; also deterministic or lognormal), always
+    with mean 1/mu; components without capacity take no time. A component that is down
+    loses the jobs that reach it, unless the previous component of the path is a store,
+    or [D4] it is a store itself; then the jobs are held until the fault ends.
     """
     rng = random.Random(seed)
     jobs = []
@@ -130,7 +154,7 @@ def simulate(scenario, seed, rates, capacities):
             if (end_of_fault is not None and c.name not in recovered and j.held is False
                     and j.t > end_of_fault and j.t >= free):
                 recovered[c.name] = j.t - end_of_fault  # first new arrival that finds no backlog
-            free = start + rng.expovariate(mu)
+            free = start + _service_time(rng, mu)
             j.t = free
     if end_of_fault is not None:
         for c in _stations(scenario):
